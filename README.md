@@ -56,9 +56,22 @@ inicial, roles, visibilidad por rol, asignación de horas, sesiones).
 python scripts/presupuesto_a_json.py "PRESUPUESTO DE HORAS 2026.xlsx"
 ```
 
-Las semanas van del lunes 1 de junio de 2026 al 29 de marzo de 2027. La fase
-de cada celda sale del color de relleno de la hoja. Para volver a cargar el
-archivo en una base ya creada: Ajustes → *Recargar presupuesto base*.
+Las semanas del Excel van del lunes 1 de junio de 2026 al 29 de marzo de 2027.
+La fase de cada celda sale del color de relleno de la hoja. Para volver a cargar
+el archivo en una base ya creada: Ajustes → *Recargar presupuesto base*.
+
+## Cómo crece el calendario
+
+El gerente amplía el calendario desde **Ajustes → Calendario → Ampliar hasta**.
+Cada semana nueva empieza en lunes, toma la etiqueta al estilo del Excel
+("Del 13 al 17", del primer día hábil al sábado), el mes que contiene la
+mayoría de días hábiles y una cargabilidad de 44 h menos 8 h por cada festivo
+de Colombia (`api/_lib/calendario.js` calcula los festivos, incluidos los que
+se trasladan al lunes y los que dependen de Semana Santa). Después, en la
+cuadrícula del presupuesto, el gerente puede hacer clic en el encabezado de
+una semana para ajustar su etiqueta, su mes o su cargabilidad. El filtro de mes
+de la cuadrícula y del mapa de carga permite ver un mes a la vez cuando el
+calendario es largo.
 
 ## Marca
 

@@ -163,6 +163,29 @@ async function waitForServer() {
     r = await senior('POST', '/api/budget?action=seed');
     assert.strictEqual(r.status, 403);
 
+    /* ---- ampliar el calendario y ajustar una semana ---- */
+    r = await senior('POST', '/api/budget?action=weeks', { until: '2027-06-30' });
+    assert.strictEqual(r.status, 403, 'solo el gerente amplía el calendario');
+    r = await gerente('POST', '/api/budget?action=weeks', { until: '2027-03-01' });
+    assert.strictEqual(r.status, 400, 'no se puede ampliar hacia atrás');
+    r = await gerente('POST', '/api/budget?action=weeks', { until: '2027-06-30' });
+    assert.strictEqual(r.status, 201, JSON.stringify(r.body));
+    assert.strictEqual(r.body.added, 13, 'del 5 de abril al 28 de junio de 2027 son 13 semanas');
+    assert.strictEqual(r.body.weeks.length, 57);
+    const nueva = r.body.weeks[44];
+    assert.strictEqual(nueva.start, '2027-04-05');
+    assert.strictEqual(nueva.month, 'Abril');
+    assert.strictEqual(nueva.capacity, 44);
+    const conFestivo = r.body.weeks.find(function (w) { return w.start === '2027-05-10'; });
+    assert.strictEqual(conFestivo.capacity, 36, 'la semana con festivo (Ascensión) descuenta 8 h');
+    assert.strictEqual(conFestivo.label, 'Del 11 al 15');
+
+    r = await gerente('PATCH', '/api/budget?action=week', { idx: nueva.idx, capacity: 40 });
+    assert.strictEqual(r.status, 200);
+    assert.strictEqual(r.body.weeks[44].capacity, 40);
+    r = await senior('PUT', '/api/budget', { rows: [{ clientId: nuevo.id, personId: paula.id, weekIdx: nueva.idx, hours: 6, phase: 'cierre' }] });
+    assert.strictEqual(r.status, 200, 'se pueden asignar horas en las semanas nuevas');
+
     /* ---- contraseña propia y cierre de sesión ---- */
     r = await junior('POST', '/api/auth?action=password', { current: 'mala', password: 'otra-clave-123' });
     assert.strictEqual(r.status, 400);
