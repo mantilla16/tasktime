@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
 # Preparación inicial del servidor Ubuntu (una sola vez). Después, cada push a
-# main lo despliega GitHub Actions (.github/workflows/deploy.yml).
+# main lo despliega el runner auto-hospedado de GitHub Actions
+# (.github/workflows/deploy.yml), que corre en este mismo servidor.
 #
 #   sudo bash instalar_servidor.sh https://github.com/mantilla16/tasktime.git /opt/tasktime
 #
-# Deja: Docker con compose, el usuario de despliegue con acceso a docker, el
-# repositorio clonado, un .env con la clave de Postgres generada y la clave SSH
-# que hay que registrar como secreto DEPLOY_KEY en GitHub. Si el servidor ya
-# tiene Docker y el usuario (por otro proyecto), solo agrega lo que falta.
+# Deja: Docker con compose (si faltaba), el repositorio clonado en la ruta,
+# un .env con la clave de Postgres generada y los contenedores arrancados.
+# El dueño de la carpeta es el usuario que ejecuta sudo (el mismo que corre
+# los runners), para que el runner pueda actualizarla sin permisos extra.
 set -euo pipefail
 
 REPO="${1:?Uso: instalar_servidor.sh URL_DEL_REPO [RUTA] [USUARIO]}"
 RUTA="${2:-/opt/tasktime}"
-USUARIO="${3:-bot}"
+USUARIO="${3:-${SUDO_USER:-$(id -un)}}"
 
 echo "== Docker"
 if ! command -v docker >/dev/null 2>&1; then
@@ -28,47 +29,39 @@ https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_C
   apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 fi
 
-echo "== Usuario $USUARIO"
+echo "== Usuario $USUARIO (dueño de la carpeta y del runner)"
 id -u "$USUARIO" >/dev/null 2>&1 || useradd -m -s /bin/bash "$USUARIO"
 usermod -aG docker "$USUARIO"
 
 echo "== Repositorio en $RUTA"
 if [ ! -d "$RUTA/.git" ]; then
-  mkdir -p "$(dirname "$RUTA")"
-  sudo -u "$USUARIO" git clone "$REPO" "$RUTA" || git clone "$REPO" "$RUTA"
-  chown -R "$USUARIO:$USUARIO" "$RUTA"
+  mkdir -p "$RUTA"
+  git clone "$REPO" "$RUTA"
 fi
+chown -R "$USUARIO:$USUARIO" "$RUTA"
 cd "$RUTA"
 
 echo "== .env"
 if [ ! -f .env ]; then
-  CLAVE_DB="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 40)"
+  CLAVE_DB="$(head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | cut -c1-40)"
   sed "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$CLAVE_DB/" .env.example > .env
   chmod 600 .env
   chown "$USUARIO:$USUARIO" .env
   echo "   Creado $RUTA/.env con una clave de Postgres aleatoria. Ajusta WEB_PORT si el 3100 está ocupado."
-fi
-
-echo "== Clave SSH para GitHub Actions"
-CLAVE="/home/$USUARIO/.ssh/deploy_ed25519"
-if [ ! -f "$CLAVE" ]; then
-  sudo -u "$USUARIO" mkdir -p "/home/$USUARIO/.ssh"
-  sudo -u "$USUARIO" ssh-keygen -t ed25519 -N "" -f "$CLAVE" -C "github-actions-deploy"
-  sudo -u "$USUARIO" bash -c "cat '$CLAVE.pub' >> /home/$USUARIO/.ssh/authorized_keys"
-  chmod 700 "/home/$USUARIO/.ssh"; chmod 600 "/home/$USUARIO/.ssh/authorized_keys"
 else
-  echo "   Ya existe $CLAVE: reutiliza el mismo secreto DEPLOY_KEY del otro proyecto."
+  echo "   Ya existe .env; se conserva."
 fi
 
 echo "== Primer arranque"
 sudo -u "$USUARIO" docker compose up -d --build
 sudo -u "$USUARIO" docker compose ps
 
+PUERTO="$(grep -E '^WEB_PORT=' .env | cut -d= -f2 || true)"
 echo
-echo "Listo. En GitHub (repo tasktime) crea los secretos:"
-echo "  DEPLOY_HOST = $(hostname -I | awk '{print $1}')"
-echo "  DEPLOY_USER = $USUARIO"
-echo "  DEPLOY_PATH = $RUTA"
-echo "  DEPLOY_KEY  = contenido de $CLAVE (clave PRIVADA)"
-echo "La app escucha en http://127.0.0.1:$(grep -E '^WEB_PORT=' .env | cut -d= -f2 || echo 3100);"
-echo "publícala con el proxy (ver deploy/nginx.conf.example) y abre la URL: pedirá crear la cuenta de gerente."
+echo "Listo. La app escucha en http://127.0.0.1:${PUERTO:-3100}."
+echo "Siguiente paso: registra un runner auto-hospedado para el repositorio tasktime"
+echo "(GitHub > Settings > Actions > Runners > New self-hosted runner) con el usuario $USUARIO,"
+echo "por ejemplo en /home/$USUARIO/actions-runner-tasktime, e instálalo como servicio:"
+echo "    sudo ./svc.sh install $USUARIO && sudo ./svc.sh start"
+echo "Después, cada push a main actualiza $RUTA y reconstruye los contenedores."
+echo "Publica la app con el proxy (deploy/nginx.conf.example) y abre la URL: pedirá crear la cuenta de gerente."

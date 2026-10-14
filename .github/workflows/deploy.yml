@@ -1,13 +1,11 @@
-# Despliegue al servidor Ubuntu en cada push a main, después de que pasen las
-# pruebas. Entra por SSH, actualiza el código y reconstruye los contenedores.
+# Despliegue en el servidor Ubuntu en cada push a main, después de que pasen
+# las pruebas. Corre en el runner auto-hospedado del servidor (como los demás
+# proyectos): actualiza la copia de /opt/tasktime y reconstruye los contenedores.
 #
-# Secretos que hay que crear en GitHub (Settings > Secrets and variables > Actions):
-#   DEPLOY_HOST   IP o nombre del servidor
-#   DEPLOY_USER   usuario Linux con acceso a docker (ej. bot)
-#   DEPLOY_KEY    clave privada SSH (ed25519) cuyo .pub está en authorized_keys del servidor
-#   DEPLOY_PATH   carpeta del repositorio en el servidor (ej. /opt/tasktime)
-# El .env del servidor se crea a mano una sola vez con deploy/instalar_servidor.sh
-# y nunca viaja por GitHub.
+# No necesita secretos. El .env del servidor se crea una sola vez con
+# deploy/instalar_servidor.sh y nunca viaja por GitHub. Si el repositorio vive
+# en otra ruta, define la variable DEPLOY_PATH en
+# Settings > Secrets and variables > Actions > Variables.
 name: desplegar
 
 on:
@@ -32,20 +30,18 @@ jobs:
 
   desplegar:
     needs: pruebas
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - name: Desplegar por SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_KEY }}
-          script_stop: true
-          script: |
-            cd "${{ secrets.DEPLOY_PATH }}"
-            git fetch --all --prune
-            git reset --hard origin/main
-            docker compose build --pull
-            docker compose up -d --remove-orphans
-            docker image prune -f
-            docker compose ps
+      - name: Actualizar código y reconstruir contenedores
+        env:
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/tasktime' }}
+        run: |
+          set -euo pipefail
+          cd "$DEPLOY_PATH"
+          test -f .env || { echo "Falta $DEPLOY_PATH/.env: corre deploy/instalar_servidor.sh una vez."; exit 1; }
+          git fetch --all --prune
+          git reset --hard origin/main
+          docker compose build --pull
+          docker compose up -d --remove-orphans
+          docker image prune -f
+          docker compose ps

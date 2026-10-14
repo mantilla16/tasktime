@@ -27,34 +27,37 @@ horas de otras personas, haga lo que haga el navegador.
 
 ## Despliegue en el servidor Ubuntu
 
-Mismo esquema que los otros proyectos del servidor: Docker Compose y despliegue
-automático por SSH desde GitHub Actions en cada push a `main`.
+Mismo esquema que los otros proyectos del servidor: Docker Compose y un runner
+auto-hospedado de GitHub Actions que corre en el propio servidor. Cada push a
+`main` corre las pruebas y, si pasan, el runner actualiza `/opt/tasktime` y
+reconstruye los contenedores. No hacen falta secretos.
 
-1. **Una sola vez, en el servidor** (como root):
+1. **Una sola vez, en el servidor**:
 
    ```bash
    curl -fsSL https://raw.githubusercontent.com/mantilla16/tasktime/main/deploy/instalar_servidor.sh -o instalar_servidor.sh
-   sudo bash instalar_servidor.sh https://github.com/mantilla16/tasktime.git /opt/tasktime bot
+   sudo bash instalar_servidor.sh https://github.com/mantilla16/tasktime.git /opt/tasktime
    ```
 
-   Instala Docker si falta, clona el repo en `/opt/tasktime`, crea `.env` con una
-   clave de Postgres aleatoria, genera (o reutiliza) la clave SSH de despliegue y
-   levanta los contenedores. La app queda escuchando en `127.0.0.1:3100`
-   (cámbialo en `.env` con `WEB_PORT` si ese puerto ya está en uso).
-2. **Publicar con HTTPS**: copia `deploy/nginx.conf.example` a
+   Instala Docker si falta, clona el repo en `/opt/tasktime` (dueño: el usuario
+   que ejecuta `sudo`, el mismo de los runners), crea `.env` con una clave de
+   Postgres aleatoria y levanta los contenedores. La app queda escuchando en
+   `127.0.0.1:3100` (cámbialo en `.env` con `WEB_PORT` si está ocupado).
+2. **Registrar el runner del repositorio**: en GitHub, repo tasktime → Settings →
+   Actions → Runners → *New self-hosted runner*, con el mismo usuario, en una
+   carpeta propia (por ejemplo `~/actions-runner-tasktime`), e instalarlo como
+   servicio con `sudo ./svc.sh install <usuario> && sudo ./svc.sh start`. Si el
+   repositorio vive en otra ruta, define la variable `DEPLOY_PATH` en Settings →
+   Secrets and variables → Actions → Variables.
+3. **Publicar con HTTPS**: copia `deploy/nginx.conf.example` a
    `/etc/nginx/sites-available/tasktime`, pon tu dominio y corre `certbot --nginx`.
-3. **Secretos en GitHub** (Settings → Secrets and variables → Actions):
-   `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KEY`, `DEPLOY_PATH`. Si el servidor ya
-   despliega otro proyecto con el mismo usuario, los tres primeros son los mismos;
-   solo cambia `DEPLOY_PATH` (`/opt/tasktime`).
 4. Abre la URL: la primera vez pide crear la cuenta del **gerente** y carga el
    presupuesto 2026 (24 clientes, 7 funcionarios, 44 semanas). Luego, en
    **Personas**, registra el correo de cada funcionario y asígnale una contraseña
    temporal con el icono de llave.
 
-Desde entonces, cada push a `main` corre las pruebas y, si pasan, actualiza el
-servidor (`docker compose build && up -d`). Los datos viven en el volumen
-`pgdata` y sobreviven a los despliegues. Copia de seguridad:
+Los datos viven en el volumen `pgdata` y sobreviven a los despliegues. Copia de
+seguridad:
 
 ```bash
 docker compose exec db pg_dump -U tasktime tasktime > respaldo.sql
