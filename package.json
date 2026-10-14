@@ -1,0 +1,16 @@
+{
+  "name": "russell-tareas",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Russell — gestión de tareas y presupuesto de horas del equipo, con roles (gerente, senior, junior). Estado en Neon; notificaciones por correo con la cuenta de Google conectada.",
+  "scripts": {
+    "dev": "node dev-server.js",
+    "test": "node test/api.test.js"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.9"
+  }
+}

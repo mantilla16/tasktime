@@ -1,0 +1,2055 @@
+{
+ "source": "PRESUPUESTO DE HORAS 2026.xlsx",
+ "period": {
+  "from": "2026-06-01",
+  "to": "2027-03-29"
+ },
+ "weeks": [
+  {
+   "index": 0,
+   "start": "2026-06-01",
+   "label": "Del 01 al 06",
+   "month": "Junio",
+   "capacity": 44
+  },
+  {
+   "index": 1,
+   "start": "2026-06-08",
+   "label": "Del 08 al 13",
+   "month": "Junio",
+   "capacity": 36
+  },
+  {
+   "index": 2,
+   "start": "2026-06-15",
+   "label": "Del 15 al 20",
+   "month": "Junio",
+   "capacity": 36
+  },
+  {
+   "index": 3,
+   "start": "2026-06-22",
+   "label": "Del 22 al 27",
+   "month": "Junio",
+   "capacity": 44
+  },
+  {
+   "index": 4,
+   "start": "2026-06-29",
+   "label": "Del 29 al 04",
+   "month": "Julio",
+   "capacity": 36
+  },
+  {
+   "index": 5,
+   "start": "2026-07-06",
+   "label": "Del 06 al 11",
+   "month": "Julio",
+   "capacity": 44
+  },
+  {
+   "index": 6,
+   "start": "2026-07-13",
+   "label": "Del 13 al 18",
+   "month": "Julio",
+   "capacity": 34
+  },
+  {
+   "index": 7,
+   "start": "2026-07-20",
+   "label": "Del 20 al 25",
+   "month": "Julio",
+   "capacity": 34
+  },
+  {
+   "index": 8,
+   "start": "2026-07-27",
+   "label": "Del 27 al 01",
+   "month": "Julio",
+   "capacity": 42
+  },
+  {
+   "index": 9,
+   "start": "2026-08-03",
+   "label": "Del 03 al 08",
+   "month": "Agosto",
+   "capacity": 34
+  },
+  {
+   "index": 10,
+   "start": "2026-08-10",
+   "label": "Del 10 al 15",
+   "month": "Agosto",
+   "capacity": 42
+  },
+  {
+   "index": 11,
+   "start": "2026-08-17",
+   "label": "Del 18 al 22",
+   "month": "Agosto",
+   "capacity": 34
+  },
+  {
+   "index": 12,
+   "start": "2026-08-24",
+   "label": "Del 24 al 29",
+   "month": "Agosto",
+   "capacity": 42
+  },
+  {
+   "index": 13,
+   "start": "2026-08-31",
+   "label": "Del 31 al 4",
+   "month": "Septiembre",
+   "capacity": 42
+  },
+  {
+   "index": 14,
+   "start": "2026-09-07",
+   "label": "Del 7 al 11",
+   "month": "Septiembre",
+   "capacity": 42
+  },
+  {
+   "index": 15,
+   "start": "2026-09-14",
+   "label": "Del 14 al 18",
+   "month": "Septiembre",
+   "capacity": 42
+  },
+  {
+   "index": 16,
+   "start": "2026-09-21",
+   "label": "Del 21 al 25",
+   "month": "Septiembre",
+   "capacity": 42
+  },
+  {
+   "index": 17,
+   "start": "2026-09-28",
+   "label": "Del 28 al 2",
+   "month": "Septiembre",
+   "capacity": 42
+  },
+  {
+   "index": 18,
+   "start": "2026-10-05",
+   "label": "Del 5 al 9",
+   "month": "Octubre",
+   "capacity": 42
+  },
+  {
+   "index": 19,
+   "start": "2026-10-12",
+   "label": "Del 13 al 16",
+   "month": "Octubre",
+   "capacity": 34
+  },
+  {
+   "index": 20,
+   "start": "2026-10-19",
+   "label": "Del 19 al 23",
+   "month": "Octubre",
+   "capacity": 42
+  },
+  {
+   "index": 21,
+   "start": "2026-10-26",
+   "label": "Del 26 al 30",
+   "month": "Octubre",
+   "capacity": 42
+  },
+  {
+   "index": 22,
+   "start": "2026-11-02",
+   "label": "Del 3 al 6",
+   "month": "Noviembre",
+   "capacity": 34
+  },
+  {
+   "index": 23,
+   "start": "2026-11-09",
+   "label": "Del 9 al 16",
+   "month": "Noviembre",
+   "capacity": 42
+  },
+  {
+   "index": 24,
+   "start": "2026-11-16",
+   "label": "Del 17 al 20",
+   "month": "Noviembre",
+   "capacity": 34
+  },
+  {
+   "index": 25,
+   "start": "2026-11-23",
+   "label": "Del 23 al 27",
+   "month": "Noviembre",
+   "capacity": 42
+  },
+  {
+   "index": 26,
+   "start": "2026-11-30",
+   "label": "Del 30 al 4",
+   "month": "Diciembre",
+   "capacity": 42
+  },
+  {
+   "index": 27,
+   "start": "2026-12-07",
+   "label": "Del 7 al 11",
+   "month": "Diciembre",
+   "capacity": 34
+  },
+  {
+   "index": 28,
+   "start": "2026-12-14",
+   "label": "Del 14 al 18",
+   "month": "Diciembre",
+   "capacity": 42
+  },
+  {
+   "index": 29,
+   "start": "2026-12-21",
+   "label": "Del 21 al 24",
+   "month": "Diciembre",
+   "capacity": 34
+  },
+  {
+   "index": 30,
+   "start": "2026-12-28",
+   "label": "Del 28 al 31",
+   "month": "Diciembre",
+   "capacity": 34
+  },
+  {
+   "index": 31,
+   "start": "2027-01-04",
+   "label": "Del 4 al 8",
+   "month": "Enero",
+   "capacity": 42
+  },
+  {
+   "index": 32,
+   "start": "2027-01-11",
+   "label": "Del 12 al 15",
+   "month": "Enero",
+   "capacity": 34
+  },
+  {
+   "index": 33,
+   "start": "2027-01-18",
+   "label": "Del 18 al 22",
+   "month": "Enero",
+   "capacity": 42
+  },
+  {
+   "index": 34,
+   "start": "2027-01-25",
+   "label": "Del 25 al 29",
+   "month": "Enero",
+   "capacity": 42
+  },
+  {
+   "index": 35,
+   "start": "2027-02-01",
+   "label": "Del 1 al 5",
+   "month": "Febrero",
+   "capacity": 42
+  },
+  {
+   "index": 36,
+   "start": "2027-02-08",
+   "label": "Del 8 al 12",
+   "month": "Febrero",
+   "capacity": 42
+  },
+  {
+   "index": 37,
+   "start": "2027-02-15",
+   "label": "Del 15 al 19",
+   "month": "Febrero",
+   "capacity": 42
+  },
+  {
+   "index": 38,
+   "start": "2027-02-22",
+   "label": "Del 22 al 26",
+   "month": "Febrero",
+   "capacity": 42
+  },
+  {
+   "index": 39,
+   "start": "2027-03-01",
+   "label": "Del 1 al 5",
+   "month": "Marzo",
+   "capacity": 42
+  },
+  {
+   "index": 40,
+   "start": "2027-03-08",
+   "label": "Del 8 al 12",
+   "month": "Marzo",
+   "capacity": 42
+  },
+  {
+   "index": 41,
+   "start": "2027-03-15",
+   "label": "Del 15 al 19",
+   "month": "Marzo",
+   "capacity": 42
+  },
+  {
+   "index": 42,
+   "start": "2027-03-22",
+   "label": "Del 22 al 26",
+   "month": "Marzo",
+   "capacity": 42
+  },
+  {
+   "index": 43,
+   "start": "2027-03-29",
+   "label": "Del 29 al 3",
+   "month": "Marzo",
+   "capacity": 42
+  }
+ ],
+ "people": [
+  {
+   "name": "Roberto Gonzalez",
+   "role": "senior"
+  },
+  {
+   "name": "Tatiana Castillo",
+   "role": "senior"
+  },
+  {
+   "name": "Robinson Romero",
+   "role": "senior"
+  },
+  {
+   "name": "Paola Ruiz",
+   "role": "senior"
+  },
+  {
+   "name": "Paula Ariza",
+   "role": "junior"
+  },
+  {
+   "name": "Arleidis Alvarez",
+   "role": "junior"
+  },
+  {
+   "name": "Laura Aristizabal",
+   "role": "junior"
+  }
+ ],
+ "clients": [
+  "Centro Empresarial Buenavista",
+  "Centro Comercial Buenavista Monteria",
+  "Grupo KAIA",
+  "Instituto del Corazón de Bucaramanga",
+  "HCM Pinturas",
+  "Inversiones D JUAN",
+  "General 3000",
+  "Constructora Avanade",
+  "AB Marine",
+  "Ground Investment",
+  "Kredit Plus",
+  "Kredit S.A.S",
+  "Liquitech",
+  "Doxa Talent",
+  "Fondo Garantia",
+  "Marriot",
+  "Camacol Atlántico",
+  "C.I. ACA",
+  "Probarranquilla",
+  "Boubalos S.A.S",
+  "Cedel",
+  "EQUINORTE",
+  "Quintal",
+  "Club Lago De Caujaral"
+ ],
+ "budget": [
+  {
+   "client": "Centro Empresarial Buenavista",
+   "person": "Roberto Gonzalez",
+   "week": 2,
+   "hours": 6.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Centro Empresarial Buenavista",
+   "person": "Roberto Gonzalez",
+   "week": 7,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Centro Empresarial Buenavista",
+   "person": "Roberto Gonzalez",
+   "week": 11,
+   "hours": 14.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Centro Empresarial Buenavista",
+   "person": "Roberto Gonzalez",
+   "week": 21,
+   "hours": 26.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Centro Empresarial Buenavista",
+   "person": "Roberto Gonzalez",
+   "week": 33,
+   "hours": 14.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "Centro Comercial Buenavista Monteria",
+   "person": "Roberto Gonzalez",
+   "week": 3,
+   "hours": 6.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Centro Comercial Buenavista Monteria",
+   "person": "Roberto Gonzalez",
+   "week": 7,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Centro Comercial Buenavista Monteria",
+   "person": "Roberto Gonzalez",
+   "week": 12,
+   "hours": 16.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Centro Comercial Buenavista Monteria",
+   "person": "Roberto Gonzalez",
+   "week": 20,
+   "hours": 16.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Centro Comercial Buenavista Monteria",
+   "person": "Roberto Gonzalez",
+   "week": 23,
+   "hours": 26.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Centro Comercial Buenavista Monteria",
+   "person": "Roberto Gonzalez",
+   "week": 34,
+   "hours": 16.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "Grupo KAIA",
+   "person": "Tatiana Castillo",
+   "week": 3,
+   "hours": 10.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Grupo KAIA",
+   "person": "Tatiana Castillo",
+   "week": 7,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Grupo KAIA",
+   "person": "Tatiana Castillo",
+   "week": 8,
+   "hours": 18.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Robinson Romero",
+   "week": 2,
+   "hours": 10.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Robinson Romero",
+   "week": 7,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Robinson Romero",
+   "week": 10,
+   "hours": 26.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Robinson Romero",
+   "week": 11,
+   "hours": 14.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Robinson Romero",
+   "week": 12,
+   "hours": 18.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Robinson Romero",
+   "week": 21,
+   "hours": 40.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Robinson Romero",
+   "week": 22,
+   "hours": 34.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Robinson Romero",
+   "week": 35,
+   "hours": 20.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Robinson Romero",
+   "week": 36,
+   "hours": 20.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Robinson Romero",
+   "week": 37,
+   "hours": 20.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "HCM Pinturas",
+   "person": "Tatiana Castillo",
+   "week": 2,
+   "hours": 10.0,
+   "phase": "previas"
+  },
+  {
+   "client": "HCM Pinturas",
+   "person": "Tatiana Castillo",
+   "week": 7,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "HCM Pinturas",
+   "person": "Tatiana Castillo",
+   "week": 9,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Inversiones D JUAN",
+   "person": "Robinson Romero",
+   "week": 3,
+   "hours": 6.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Inversiones D JUAN",
+   "person": "Robinson Romero",
+   "week": 7,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "General 3000",
+   "person": "Robinson Romero",
+   "week": 3,
+   "hours": 6.0,
+   "phase": "previas"
+  },
+  {
+   "client": "General 3000",
+   "person": "Robinson Romero",
+   "week": 7,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Constructora Avanade",
+   "person": "Tatiana Castillo",
+   "week": 3,
+   "hours": 6.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Constructora Avanade",
+   "person": "Tatiana Castillo",
+   "week": 7,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Tatiana Castillo",
+   "week": 2,
+   "hours": 10.0,
+   "phase": "previas"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Tatiana Castillo",
+   "week": 4,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Tatiana Castillo",
+   "week": 5,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Tatiana Castillo",
+   "week": 7,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Tatiana Castillo",
+   "week": 8,
+   "hours": 12.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Ground Investment",
+   "person": "Roberto Gonzalez",
+   "week": 2,
+   "hours": 6.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Ground Investment",
+   "person": "Roberto Gonzalez",
+   "week": 5,
+   "hours": 12.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Ground Investment",
+   "person": "Roberto Gonzalez",
+   "week": 7,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Ground Investment",
+   "person": "Roberto Gonzalez",
+   "week": 17,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Ground Investment",
+   "person": "Roberto Gonzalez",
+   "week": 25,
+   "hours": 12.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Kredit Plus",
+   "person": "Paola Ruiz",
+   "week": 2,
+   "hours": 10.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Kredit Plus",
+   "person": "Paola Ruiz",
+   "week": 10,
+   "hours": 30.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Kredit Plus",
+   "person": "Paola Ruiz",
+   "week": 11,
+   "hours": 36.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Kredit Plus",
+   "person": "Paola Ruiz",
+   "week": 12,
+   "hours": 8.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Kredit Plus",
+   "person": "Paola Ruiz",
+   "week": 24,
+   "hours": 34.0,
+   "phase": null
+  },
+  {
+   "client": "Kredit Plus",
+   "person": "Paola Ruiz",
+   "week": 25,
+   "hours": 42.0,
+   "phase": null
+  },
+  {
+   "client": "Kredit S.A.S",
+   "person": "Paola Ruiz",
+   "week": 2,
+   "hours": 10.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Kredit S.A.S",
+   "person": "Paola Ruiz",
+   "week": 14,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Liquitech",
+   "person": "Paola Ruiz",
+   "week": 3,
+   "hours": 10.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Liquitech",
+   "person": "Paola Ruiz",
+   "week": 8,
+   "hours": 18.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Liquitech",
+   "person": "Paola Ruiz",
+   "week": 9,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Liquitech",
+   "person": "Paola Ruiz",
+   "week": 21,
+   "hours": 42.0,
+   "phase": null
+  },
+  {
+   "client": "Doxa Talent",
+   "person": "Paola Ruiz",
+   "week": 3,
+   "hours": 6.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Doxa Talent",
+   "person": "Paola Ruiz",
+   "week": 7,
+   "hours": 12.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Doxa Talent",
+   "person": "Paola Ruiz",
+   "week": 18,
+   "hours": 42.0,
+   "phase": null
+  },
+  {
+   "client": "Fondo Garantia",
+   "person": "Paola Ruiz",
+   "week": 3,
+   "hours": 15.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Fondo Garantia",
+   "person": "Paola Ruiz",
+   "week": 4,
+   "hours": 6.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Fondo Garantia",
+   "person": "Paola Ruiz",
+   "week": 6,
+   "hours": 18.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Fondo Garantia",
+   "person": "Paola Ruiz",
+   "week": 19,
+   "hours": 24.0,
+   "phase": null
+  },
+  {
+   "client": "Marriot",
+   "person": "Paola Ruiz",
+   "week": 1,
+   "hours": 8.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Marriot",
+   "person": "Paola Ruiz",
+   "week": 6,
+   "hours": 8.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Marriot",
+   "person": "Paola Ruiz",
+   "week": 10,
+   "hours": 8.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Camacol Atlántico",
+   "person": "Roberto Gonzalez",
+   "week": 2,
+   "hours": 6.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Camacol Atlántico",
+   "person": "Roberto Gonzalez",
+   "week": 11,
+   "hours": 16.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Camacol Atlántico",
+   "person": "Roberto Gonzalez",
+   "week": 22,
+   "hours": 20.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "C.I. ACA",
+   "person": "Roberto Gonzalez",
+   "week": 2,
+   "hours": 10.0,
+   "phase": "previas"
+  },
+  {
+   "client": "C.I. ACA",
+   "person": "Roberto Gonzalez",
+   "week": 15,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "C.I. ACA",
+   "person": "Roberto Gonzalez",
+   "week": 24,
+   "hours": 34.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Probarranquilla",
+   "person": "Roberto Gonzalez",
+   "week": 3,
+   "hours": 6.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Probarranquilla",
+   "person": "Roberto Gonzalez",
+   "week": 4,
+   "hours": 19.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Probarranquilla",
+   "person": "Roberto Gonzalez",
+   "week": 6,
+   "hours": 18.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Probarranquilla",
+   "person": "Roberto Gonzalez",
+   "week": 20,
+   "hours": 26.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Boubalos S.A.S",
+   "person": "Roberto Gonzalez",
+   "week": 2,
+   "hours": 10.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Boubalos S.A.S",
+   "person": "Roberto Gonzalez",
+   "week": 9,
+   "hours": 18.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Boubalos S.A.S",
+   "person": "Roberto Gonzalez",
+   "week": 10,
+   "hours": 18.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Boubalos S.A.S",
+   "person": "Roberto Gonzalez",
+   "week": 22,
+   "hours": 14.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Cedel",
+   "person": "Roberto Gonzalez",
+   "week": 3,
+   "hours": 6.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Cedel",
+   "person": "Roberto Gonzalez",
+   "week": 8,
+   "hours": 12.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Cedel",
+   "person": "Roberto Gonzalez",
+   "week": 25,
+   "hours": 12.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "EQUINORTE",
+   "person": "Tatiana Castillo",
+   "week": 2,
+   "hours": 10.0,
+   "phase": "previas"
+  },
+  {
+   "client": "EQUINORTE",
+   "person": "Tatiana Castillo",
+   "week": 7,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "EQUINORTE",
+   "person": "Tatiana Castillo",
+   "week": 8,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "EQUINORTE",
+   "person": "Tatiana Castillo",
+   "week": 21,
+   "hours": 36.0,
+   "phase": null
+  },
+  {
+   "client": "Quintal",
+   "person": "Roberto Gonzalez",
+   "week": 3,
+   "hours": 10.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Quintal",
+   "person": "Roberto Gonzalez",
+   "week": 9,
+   "hours": 18.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Quintal",
+   "person": "Roberto Gonzalez",
+   "week": 10,
+   "hours": 18.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Quintal",
+   "person": "Roberto Gonzalez",
+   "week": 23,
+   "hours": 42.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Centro Empresarial Buenavista",
+   "person": "Paula Ariza",
+   "week": 2,
+   "hours": 5.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Centro Empresarial Buenavista",
+   "person": "Paula Ariza",
+   "week": 3,
+   "hours": 16.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Centro Empresarial Buenavista",
+   "person": "Paula Ariza",
+   "week": 6,
+   "hours": 16.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Centro Empresarial Buenavista",
+   "person": "Paula Ariza",
+   "week": 11,
+   "hours": 32.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Centro Empresarial Buenavista",
+   "person": "Paula Ariza",
+   "week": 12,
+   "hours": 24.0,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Centro Empresarial Buenavista",
+   "person": "Paula Ariza",
+   "week": 13,
+   "hours": 10.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Centro Empresarial Buenavista",
+   "person": "Paula Ariza",
+   "week": 15,
+   "hours": 16.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Centro Empresarial Buenavista",
+   "person": "Paula Ariza",
+   "week": 20,
+   "hours": 16.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Centro Empresarial Buenavista",
+   "person": "Paula Ariza",
+   "week": 21,
+   "hours": 26.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Centro Empresarial Buenavista",
+   "person": "Paula Ariza",
+   "week": 24,
+   "hours": 16.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Centro Empresarial Buenavista",
+   "person": "Paula Ariza",
+   "week": 28,
+   "hours": 16.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Centro Empresarial Buenavista",
+   "person": "Paula Ariza",
+   "week": 33,
+   "hours": 32.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "Centro Comercial Buenavista Monteria",
+   "person": "Arleidis Alvarez",
+   "week": 3,
+   "hours": 5.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Centro Comercial Buenavista Monteria",
+   "person": "Arleidis Alvarez",
+   "week": 12,
+   "hours": 20.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Centro Comercial Buenavista Monteria",
+   "person": "Arleidis Alvarez",
+   "week": 16,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Centro Comercial Buenavista Monteria",
+   "person": "Arleidis Alvarez",
+   "week": 23,
+   "hours": 26.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Centro Comercial Buenavista Monteria",
+   "person": "Arleidis Alvarez",
+   "week": 34,
+   "hours": 20.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "Grupo KAIA",
+   "person": "Arleidis Alvarez",
+   "week": 3,
+   "hours": 7.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Grupo KAIA",
+   "person": "Arleidis Alvarez",
+   "week": 8,
+   "hours": 18.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Grupo KAIA",
+   "person": "Arleidis Alvarez",
+   "week": 14,
+   "hours": 9.0,
+   "phase": "compensatorio"
+  },
+  {
+   "client": "Grupo KAIA",
+   "person": "Arleidis Alvarez",
+   "week": 19,
+   "hours": 30.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Grupo KAIA",
+   "person": "Arleidis Alvarez",
+   "week": 28,
+   "hours": 4.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Grupo KAIA",
+   "person": "Arleidis Alvarez",
+   "week": 34,
+   "hours": 22.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "Grupo KAIA",
+   "person": "Arleidis Alvarez",
+   "week": 39,
+   "hours": 22.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Arleidis Alvarez",
+   "week": 2,
+   "hours": 7.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Arleidis Alvarez",
+   "week": 10,
+   "hours": 36.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Arleidis Alvarez",
+   "week": 12,
+   "hours": 18.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Arleidis Alvarez",
+   "week": 21,
+   "hours": 42.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Arleidis Alvarez",
+   "week": 22,
+   "hours": 12.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Arleidis Alvarez",
+   "week": 35,
+   "hours": 42.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Arleidis Alvarez",
+   "week": 36,
+   "hours": 42.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "Instituto del Corazón de Bucaramanga",
+   "person": "Arleidis Alvarez",
+   "week": 37,
+   "hours": 42.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "HCM Pinturas",
+   "person": "Arleidis Alvarez",
+   "week": 2,
+   "hours": 7.0,
+   "phase": "previas"
+  },
+  {
+   "client": "HCM Pinturas",
+   "person": "Arleidis Alvarez",
+   "week": 7,
+   "hours": 26.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "HCM Pinturas",
+   "person": "Arleidis Alvarez",
+   "week": 9,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "HCM Pinturas",
+   "person": "Arleidis Alvarez",
+   "week": 14,
+   "hours": 12.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "HCM Pinturas",
+   "person": "Arleidis Alvarez",
+   "week": 18,
+   "hours": 18.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "HCM Pinturas",
+   "person": "Arleidis Alvarez",
+   "week": 23,
+   "hours": 16.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "HCM Pinturas",
+   "person": "Arleidis Alvarez",
+   "week": 24,
+   "hours": 8.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "HCM Pinturas",
+   "person": "Arleidis Alvarez",
+   "week": 25,
+   "hours": 6.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "HCM Pinturas",
+   "person": "Arleidis Alvarez",
+   "week": 28,
+   "hours": 4.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "HCM Pinturas",
+   "person": "Arleidis Alvarez",
+   "week": 38,
+   "hours": 42.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "HCM Pinturas",
+   "person": "Arleidis Alvarez",
+   "week": 39,
+   "hours": 20.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "Inversiones D JUAN",
+   "person": "Arleidis Alvarez",
+   "week": 2,
+   "hours": 5.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Inversiones D JUAN",
+   "person": "Arleidis Alvarez",
+   "week": 14,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Inversiones D JUAN",
+   "person": "Arleidis Alvarez",
+   "week": 25,
+   "hours": 24.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "General 3000",
+   "person": "Arleidis Alvarez",
+   "week": 3,
+   "hours": 5.0,
+   "phase": "previas"
+  },
+  {
+   "client": "General 3000",
+   "person": "Arleidis Alvarez",
+   "week": 14,
+   "hours": 12.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "General 3000",
+   "person": "Arleidis Alvarez",
+   "week": 26,
+   "hours": 24.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Constructora Avanade",
+   "person": "Laura Aristizabal",
+   "week": 2,
+   "hours": 5.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Constructora Avanade",
+   "person": "Laura Aristizabal",
+   "week": 4,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Constructora Avanade",
+   "person": "Laura Aristizabal",
+   "week": 16,
+   "hours": 16.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Constructora Avanade",
+   "person": "Laura Aristizabal",
+   "week": 18,
+   "hours": 8.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Constructora Avanade",
+   "person": "Laura Aristizabal",
+   "week": 23,
+   "hours": 24.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Constructora Avanade",
+   "person": "Laura Aristizabal",
+   "week": 28,
+   "hours": 2.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Constructora Avanade",
+   "person": "Laura Aristizabal",
+   "week": 39,
+   "hours": 42.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Laura Aristizabal",
+   "week": 4,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Laura Aristizabal",
+   "week": 5,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Laura Aristizabal",
+   "week": 6,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Laura Aristizabal",
+   "week": 7,
+   "hours": 14.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Laura Aristizabal",
+   "week": 14,
+   "hours": 18.0,
+   "phase": "compensatorio"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Laura Aristizabal",
+   "week": 19,
+   "hours": 8.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Laura Aristizabal",
+   "week": 20,
+   "hours": 18.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Laura Aristizabal",
+   "week": 21,
+   "hours": 6.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Laura Aristizabal",
+   "week": 23,
+   "hours": 18.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Laura Aristizabal",
+   "week": 24,
+   "hours": 18.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Laura Aristizabal",
+   "week": 28,
+   "hours": 8.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Laura Aristizabal",
+   "week": 37,
+   "hours": 42.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "AB Marine",
+   "person": "Laura Aristizabal",
+   "week": 38,
+   "hours": 42.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "Ground Investment",
+   "person": "Paula Ariza",
+   "week": 2,
+   "hours": 5.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Ground Investment",
+   "person": "Paula Ariza",
+   "week": 12,
+   "hours": 24.0,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Ground Investment",
+   "person": "Paula Ariza",
+   "week": 17,
+   "hours": 16.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Ground Investment",
+   "person": "Paula Ariza",
+   "week": 25,
+   "hours": 16.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Kredit Plus",
+   "person": "Laura Aristizabal",
+   "week": 3,
+   "hours": 7.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Kredit Plus",
+   "person": "Laura Aristizabal",
+   "week": 4,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Kredit Plus",
+   "person": "Laura Aristizabal",
+   "week": 11,
+   "hours": 32.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Kredit Plus",
+   "person": "Laura Aristizabal",
+   "week": 12,
+   "hours": 24.0,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Kredit Plus",
+   "person": "Laura Aristizabal",
+   "week": 13,
+   "hours": 20.0,
+   "phase": null
+  },
+  {
+   "client": "Kredit Plus",
+   "person": "Laura Aristizabal",
+   "week": 24,
+   "hours": 14.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Kredit Plus",
+   "person": "Laura Aristizabal",
+   "week": 25,
+   "hours": 42.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Kredit S.A.S",
+   "person": "Laura Aristizabal",
+   "week": 3,
+   "hours": 7.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Kredit S.A.S",
+   "person": "Laura Aristizabal",
+   "week": 4,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Kredit S.A.S",
+   "person": "Laura Aristizabal",
+   "week": 12,
+   "hours": 24.0,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Kredit S.A.S",
+   "person": "Laura Aristizabal",
+   "week": 14,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Liquitech",
+   "person": "Laura Aristizabal",
+   "week": 3,
+   "hours": 5.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Liquitech",
+   "person": "Laura Aristizabal",
+   "week": 4,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Liquitech",
+   "person": "Laura Aristizabal",
+   "week": 8,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Liquitech",
+   "person": "Laura Aristizabal",
+   "week": 9,
+   "hours": 34.0,
+   "phase": null
+  },
+  {
+   "client": "Liquitech",
+   "person": "Laura Aristizabal",
+   "week": 12,
+   "hours": 24.0,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Liquitech",
+   "person": "Laura Aristizabal",
+   "week": 21,
+   "hours": 36.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Doxa Talent",
+   "person": "Laura Aristizabal",
+   "week": 2,
+   "hours": 5.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Doxa Talent",
+   "person": "Laura Aristizabal",
+   "week": 4,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Doxa Talent",
+   "person": "Laura Aristizabal",
+   "week": 7,
+   "hours": 16.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Doxa Talent",
+   "person": "Laura Aristizabal",
+   "week": 12,
+   "hours": 24.0,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Doxa Talent",
+   "person": "Laura Aristizabal",
+   "week": 20,
+   "hours": 24.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Fondo Garantia",
+   "person": "Paula Ariza",
+   "week": 4,
+   "hours": 29.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Fondo Garantia",
+   "person": "Paula Ariza",
+   "week": 12,
+   "hours": 24.0,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Fondo Garantia",
+   "person": "Paula Ariza",
+   "week": 19,
+   "hours": 24.0,
+   "phase": "compensatorio"
+  },
+  {
+   "client": "Marriot",
+   "person": "Laura Aristizabal",
+   "week": 2,
+   "hours": 20.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Marriot",
+   "person": "Laura Aristizabal",
+   "week": 4,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Marriot",
+   "person": "Laura Aristizabal",
+   "week": 6,
+   "hours": 20.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Marriot",
+   "person": "Laura Aristizabal",
+   "week": 10,
+   "hours": 20.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Marriot",
+   "person": "Laura Aristizabal",
+   "week": 12,
+   "hours": 24.0,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Marriot",
+   "person": "Laura Aristizabal",
+   "week": 15,
+   "hours": 20.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Marriot",
+   "person": "Laura Aristizabal",
+   "week": 19,
+   "hours": 20.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Marriot",
+   "person": "Laura Aristizabal",
+   "week": 24,
+   "hours": 20.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Camacol Atlántico",
+   "person": "Arleidis Alvarez",
+   "week": 1,
+   "hours": 8.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Camacol Atlántico",
+   "person": "Arleidis Alvarez",
+   "week": 2,
+   "hours": 4.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Camacol Atlántico",
+   "person": "Arleidis Alvarez",
+   "week": 7,
+   "hours": 12.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Camacol Atlántico",
+   "person": "Arleidis Alvarez",
+   "week": 11,
+   "hours": 12.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Camacol Atlántico",
+   "person": "Arleidis Alvarez",
+   "week": 13,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Camacol Atlántico",
+   "person": "Arleidis Alvarez",
+   "week": 19,
+   "hours": 12.0,
+   "phase": "informe"
+  },
+  {
+   "client": "Camacol Atlántico",
+   "person": "Arleidis Alvarez",
+   "week": 22,
+   "hours": 24.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "C.I. ACA",
+   "person": "Arleidis Alvarez",
+   "week": 15,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "C.I. ACA",
+   "person": "Arleidis Alvarez",
+   "week": 18,
+   "hours": 25.0,
+   "phase": null
+  },
+  {
+   "client": "C.I. ACA",
+   "person": "Arleidis Alvarez",
+   "week": 24,
+   "hours": 34.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "C.I. ACA",
+   "person": "Arleidis Alvarez",
+   "week": 25,
+   "hours": 12.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Probarranquilla",
+   "person": "Arleidis Alvarez",
+   "week": 2,
+   "hours": 5.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Probarranquilla",
+   "person": "Arleidis Alvarez",
+   "week": 4,
+   "hours": 26.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Probarranquilla",
+   "person": "Arleidis Alvarez",
+   "week": 20,
+   "hours": 42.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Boubalos S.A.S",
+   "person": "Laura Aristizabal",
+   "week": 2,
+   "hours": 7.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Boubalos S.A.S",
+   "person": "Laura Aristizabal",
+   "week": 4,
+   "hours": null,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Boubalos S.A.S",
+   "person": "Laura Aristizabal",
+   "week": 10,
+   "hours": 24.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Boubalos S.A.S",
+   "person": "Laura Aristizabal",
+   "week": 12,
+   "hours": 24.0,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Boubalos S.A.S",
+   "person": "Laura Aristizabal",
+   "week": 22,
+   "hours": 34.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Cedel",
+   "person": "Paula Ariza",
+   "week": 2,
+   "hours": 5.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Cedel",
+   "person": "Paula Ariza",
+   "week": 8,
+   "hours": 10.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Cedel",
+   "person": "Paula Ariza",
+   "week": 12,
+   "hours": 24.0,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Cedel",
+   "person": "Paula Ariza",
+   "week": 14,
+   "hours": 36.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Cedel",
+   "person": "Paula Ariza",
+   "week": 25,
+   "hours": 16.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "EQUINORTE",
+   "person": "Paula Ariza",
+   "week": 2,
+   "hours": 7.0,
+   "phase": "previas"
+  },
+  {
+   "client": "EQUINORTE",
+   "person": "Paula Ariza",
+   "week": 7,
+   "hours": 32.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "EQUINORTE",
+   "person": "Paula Ariza",
+   "week": 8,
+   "hours": 32.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "EQUINORTE",
+   "person": "Paula Ariza",
+   "week": 12,
+   "hours": 24.0,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "EQUINORTE",
+   "person": "Paula Ariza",
+   "week": 14,
+   "hours": 18.0,
+   "phase": "compensatorio"
+  },
+  {
+   "client": "EQUINORTE",
+   "person": "Paula Ariza",
+   "week": 18,
+   "hours": 18.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "EQUINORTE",
+   "person": "Paula Ariza",
+   "week": 21,
+   "hours": 42.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "EQUINORTE",
+   "person": "Paula Ariza",
+   "week": 34,
+   "hours": 8.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "EQUINORTE",
+   "person": "Paula Ariza",
+   "week": 35,
+   "hours": 42.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "EQUINORTE",
+   "person": "Paula Ariza",
+   "week": 36,
+   "hours": 18.0,
+   "phase": "cierre"
+  },
+  {
+   "client": "Quintal",
+   "person": "Paula Ariza",
+   "week": 2,
+   "hours": 7.0,
+   "phase": "previas"
+  },
+  {
+   "client": "Quintal",
+   "person": "Paula Ariza",
+   "week": 9,
+   "hours": 20.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Quintal",
+   "person": "Paula Ariza",
+   "week": 10,
+   "hours": 28.0,
+   "phase": "planeacion"
+  },
+  {
+   "client": "Quintal",
+   "person": "Paula Ariza",
+   "week": 12,
+   "hours": 24.0,
+   "phase": "vacaciones"
+  },
+  {
+   "client": "Quintal",
+   "person": "Paula Ariza",
+   "week": 23,
+   "hours": 42.0,
+   "phase": "ejecucion"
+  },
+  {
+   "client": "Club Lago De Caujaral",
+   "person": "Paula Ariza",
+   "week": 3,
+   "hours": 20.0,
+   "phase": "especiales"
+  },
+  {
+   "client": "Club Lago De Caujaral",
+   "person": "Paola Ruiz",
+   "week": 3,
+   "hours": 36.0,
+   "phase": "especiales"
+  },
+  {
+   "client": "Club Lago De Caujaral",
+   "person": "Paola Ruiz",
+   "week": 4,
+   "hours": 20.0,
+   "phase": null
+  },
+  {
+   "client": "Club Lago De Caujaral",
+   "person": "Arleidis Alvarez",
+   "week": 3,
+   "hours": 20.0,
+   "phase": "especiales"
+  },
+  {
+   "client": "Club Lago De Caujaral",
+   "person": "Robinson Romero",
+   "week": 3,
+   "hours": 8.0,
+   "phase": "especiales"
+  }
+ ]
+}
