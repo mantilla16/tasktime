@@ -12,7 +12,7 @@
    dibujar con render() tras cada cambio.
    ========================================================================= */
 
-const S = { user: null, setupRequired: false, people: [], clients: [], weeks: [], budget: [], loaded: false };
+const S = { user: null, setupRequired: false, dominio: 'rbcol.co', msClientId: null, msTenantId: null, people: [], clients: [], weeks: [], budget: [], loaded: false };
 const UI = {
   view: null,
   weekIdx: null,
@@ -20,7 +20,8 @@ const UI = {
   filasExtra: [],
   modal: null,
   busy: false,
-  authError: null
+  authError: null,
+  msConectando: false
 };
 
 const PHASE_DEFS = [
@@ -78,6 +79,7 @@ function addDays(iso, n) {
   d.setDate(d.getDate() + n);
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
+function msMode() { return Boolean(S.msClientId && S.msTenantId); }
 function isManager() { return S.user && (S.user.role === 'gerente' || S.user.role === 'senior'); }
 function isGerente() { return S.user && S.user.role === 'gerente'; }
 function personById(id) { return S.people.find(function (p) { return p.id === id; }) || null; }
@@ -206,12 +208,116 @@ async function boot() {
     const a = await api('GET', '/api/auth');
     S.setupRequired = a.setupRequired;
     S.user = a.user;
+    S.dominio = a.dominio || S.dominio;
+    S.msClientId = a.msClientId || null;
+    S.msTenantId = a.msTenantId || null;
     if (S.user) await loadAll();
   } catch (err) {
     UI.authError = err.message;
   }
   if (S.user && S.user.mustChangePassword) UI.modal = { type: 'password', forced: true };
+  // Vuelta de Microsoft: la URL trae el código en el fragmento; se canjea
+  // por una sesión antes de dibujar nada más.
+  if (!S.user && msMode() && MS_RETURN) {
+    UI.msConectando = true;
+    render();
+    await completarMicrosoft();
+    return;
+  }
   render();
+}
+
+/* ============================ Microsoft (MSAL) ============================ */
+
+/* Se mira el fragmento UNA vez al cargar: después, el enrutador por hash lo
+   reemplaza y MSAL ya no podría leerlo. */
+const MS_RETURN = /[#&](code|error|id_token|state)=/.test(location.hash);
+let msalApp = null;
+
+function cargarMsal() {
+  if (window.msal) return Promise.resolve(window.msal);
+  return new Promise(function (resolve, reject) {
+    const s = document.createElement('script');
+    s.src = 'assets/msal-browser.min.js';
+    s.onload = function () { resolve(window.msal); };
+    s.onerror = function () { reject(new Error('No se pudo cargar la librería de Microsoft.')); };
+    document.head.appendChild(s);
+  });
+}
+
+async function msalInstance() {
+  if (msalApp) return msalApp;
+  const msal = await cargarMsal();
+  const app = new msal.PublicClientApplication({
+    auth: {
+      clientId: S.msClientId,
+      authority: 'https://login.microsoftonline.com/' + S.msTenantId,
+      redirectUri: location.origin + BASE + '/'
+    },
+    cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false }
+  });
+  await app.initialize();
+  msalApp = app;
+  return app;
+}
+
+function describirErrorMs(err) {
+  const code = (err && err.errorCode) || '';
+  const msg = (err && err.message) || '';
+  if (code === 'user_cancelled') return 'Cancelaste el inicio de sesión.';
+  if (code === 'interaction_in_progress') return 'Ya hay un inicio de sesión en curso. Espera un momento o recarga la página.';
+  if (/AADSTS50011/.test(msg)) return 'La dirección de esta página no está registrada como URI de redirección en Azure (plataforma SPA): ' + location.origin + BASE + '/';
+  if (/AADSTS700016|AADSTS90002/.test(msg)) return 'El registro de la aplicación no existe en este inquilino. Revisa MS_CLIENT_ID y MS_TENANT_ID en el servidor.';
+  return msg || 'No se pudo iniciar sesión con Microsoft.';
+}
+
+function limpiarFragmento() {
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* nada */ }
+}
+
+async function entrarConMicrosoft() {
+  UI.authError = null;
+  UI.msConectando = true;
+  render();
+  try {
+    const app = await msalInstance();
+    await app.loginRedirect({ scopes: ['openid', 'profile', 'email'], prompt: 'select_account', domainHint: S.dominio });
+  } catch (err) {
+    UI.authError = describirErrorMs(err);
+    UI.msConectando = false;
+    render();
+  }
+}
+
+async function completarMicrosoft() {
+  try {
+    const app = await msalInstance();
+    const result = await app.handleRedirectPromise();
+    limpiarFragmento();
+    if (!result || !result.idToken) { UI.msConectando = false; render(); return; }
+    const r = await api('POST', '/api/auth?action=microsoft', { idToken: result.idToken });
+    S.user = r.user;
+    S.setupRequired = false;
+    UI.view = null;
+    await loadAll();
+    if (r.seeded) toast('Presupuesto cargado: ' + r.seeded.clients + ' clientes, ' + r.seeded.people + ' personas, ' + r.seeded.budget + ' celdas.', 'ok');
+  } catch (err) {
+    limpiarFragmento();
+    UI.authError = describirErrorMs(err);
+    S.user = null;
+  } finally {
+    UI.msConectando = false;
+    render();
+  }
+}
+
+async function salirDeMicrosoft() {
+  try {
+    if (msalApp) await msalApp.clearCache();
+    Object.keys(localStorage).forEach(function (k) {
+      if (k.indexOf('msal.') === 0 || k.indexOf('login.microsoftonline.com') !== -1) localStorage.removeItem(k);
+    });
+  } catch (e) { /* que falle la limpieza no impide salir */ }
 }
 
 /* ============================ navegación ============================ */
@@ -244,6 +350,7 @@ function setView(id) {
   window.scrollTo(0, 0);
 }
 window.addEventListener('hashchange', function () {
+  if (/[#&](code|error|id_token|state)=/.test(location.hash)) return;
   const id = location.hash.replace(/^#\/?/, '');
   if (S.user && id && id !== UI.view) setView(id);
 });
@@ -253,7 +360,7 @@ window.addEventListener('hashchange', function () {
 function render() {
   const root = document.getElementById('root');
   if (!S.user) {
-    root.innerHTML = '<div class="app">' + (S.setupRequired ? renderSetup() : renderLogin()) + franja() + '</div>';
+    root.innerHTML = '<div class="app">' + (msMode() ? renderLoginMicrosoft() : (S.setupRequired ? renderSetup() : renderLogin())) + franja() + '</div>';
     const first = root.querySelector('input');
     if (first && !UI.busy) first.focus();
     return;
@@ -285,6 +392,17 @@ function renderLogin() {
     '<button class="rb-btn rb-btn--primario" type="submit"' + (UI.busy ? ' disabled' : '') + '>' + (UI.busy ? 'Entrando…' : 'Entrar') + '</button>' +
     '</form>' +
     '<p class="sec" style="margin-top:16px">¿Olvidaste tu contraseña? Pídele al gerente una nueva desde Personas.</p>' +
+    '</div></div>';
+}
+
+function renderLoginMicrosoft() {
+  const ms = '<svg width="16" height="16" viewBox="0 0 21 21" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>';
+  return '<div class="acceso"><div class="rb-tarjeta">' + logo() +
+    '<h1>Horas por <b>cliente</b></h1><p class="lead sec">Entra con tu cuenta institucional <b class="az">@' + esc(S.dominio) + '</b> de Microsoft 365.</p>' +
+    (UI.authError ? '<div class="rb-alerta rb-alerta--error" style="margin-bottom:14px">' + esc(UI.authError) + '</div>' : '') +
+    (S.setupRequired ? '<div class="rb-alerta rb-alerta--info" style="margin-bottom:14px">Aún no hay cuentas: la primera persona que entre quedará como gerente y se cargará el presupuesto 2026.</div>' : '') +
+    '<button class="rb-btn rb-btn--primario" data-act="ms-login"' + (UI.msConectando ? ' disabled' : '') + '>' + ms + (UI.msConectando ? 'Conectando…' : 'Entrar con Microsoft') + '</button>' +
+    '<p class="sec" style="margin-top:16px">La sesión queda en este navegador. No la dejes abierta en equipos compartidos.</p>' +
     '</div></div>';
 }
 
@@ -566,6 +684,7 @@ function renderClientes() {
 function renderPersonas() {
   const rows = sortPeople(S.people).map(function (p) {
     const acceso = p.active === false ? '<span class="estado gris">Inactiva</span>'
+      : msMode() ? (p.email ? '<span class="estado ok">Con correo</span>' : '<span class="estado aviso">Sin correo</span>')
       : !p.email || !p.hasPassword ? '<span class="estado aviso">Sin acceso</span>'
       : p.mustChangePassword ? '<span class="estado gris">Debe cambiar clave</span>'
       : '<span class="estado ok">Activa</span>';
@@ -579,10 +698,10 @@ function renderPersonas() {
       '<td class="num">' + Object.keys(clientes).length + '</td>' +
       '<td style="text-align:right;white-space:nowrap">' +
       '<button class="icono-btn" data-act="editar-persona" data-id="' + p.id + '" title="Editar">' + ICON.edit + '</button> ' +
-      '<button class="icono-btn" data-act="clave-persona" data-id="' + p.id + '" title="Asignar contraseña">' + ICON.key + '</button>' +
+      (msMode() ? '' : '<button class="icono-btn" data-act="clave-persona" data-id="' + p.id + '" title="Asignar contraseña">' + ICON.key + '</button>') +
       '</td></tr>';
   }).join('');
-  return titulo('<b>Personas</b>', 'Cuentas y roles del equipo. Para dar acceso, registra el correo y asigna una contraseña temporal.', '<button class="rb-btn rb-btn--primario rb-btn--sm" data-act="nueva-persona">' + ICON.plus + 'Nueva persona</button>') +
+  return titulo('<b>Personas</b>', msMode() ? 'Cada persona entra con su cuenta de Microsoft @' + esc(S.dominio) + '. Registra aquí su correo para que al entrar se reconozca con su rol; quien entre sin estar registrada queda como junior.' : 'Cuentas y roles del equipo. Para dar acceso, registra el correo y asigna una contraseña temporal.', '<button class="rb-btn rb-btn--primario rb-btn--sm" data-act="nueva-persona">' + ICON.plus + 'Nueva persona</button>') +
     '<div class="tabla-wrap"><table class="rb-tabla"><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Acceso</th><th class="num">Clientes</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
     '<p class="sec" style="margin-top:14px"><b>Gerente:</b> todo, incluida esta pantalla. <b>Senior:</b> ve y asigna horas a todo el equipo. <b>Junior:</b> solo ve sus propias horas.</p>';
 }
@@ -601,7 +720,7 @@ function renderAjustes() {
     : '';
   return titulo('<b>Ajustes</b>') +
     '<div class="rb-tarjeta" style="max-width:560px"><h2>Tu cuenta</h2><p class="sec" style="margin:4px 0 14px">' + esc(S.user.name) + ' · ' + esc(S.user.email || '') + ' · ' + ROLE_LABELS[S.user.role] + '</p>' +
-    '<button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="cambiar-clave">' + ICON.key + 'Cambiar contraseña</button></div>' + calendarioHtml + seed;
+    (msMode() ? '<p class="sec">Entras con tu cuenta de Microsoft; no hay contraseña que cambiar.</p>' : '<button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="cambiar-clave">' + ICON.key + 'Cambiar contraseña</button>') + '</div>' + calendarioHtml + seed;
 }
 
 /* ============================ Modales ============================ */
@@ -685,7 +804,7 @@ function modalPersona(m) {
     '<div class="campo"><label class="rb-etiqueta" for="p-name">Nombre</label><input class="rb-input" id="p-name" type="text" name="name" required maxlength="120" value="' + esc(p.name) + '"></div>' +
     '<div class="campo"><label class="rb-etiqueta" for="p-email">Correo (para entrar)</label><input class="rb-input" id="p-email" type="email" name="email" value="' + esc(p.email || '') + '"></div>' +
     '<div class="campo"><span class="rb-etiqueta">Rol</span>' + segmentos('role', [{ id: 'gerente', label: 'Gerente' }, { id: 'senior', label: 'Senior' }, { id: 'junior', label: 'Junior' }], p.role) + '</div>' +
-    (isNew ? '<div class="campo"><label class="check"><input type="checkbox" name="withPassword" checked> Generar una contraseña temporal para que pueda entrar</label></div>'
+    (isNew ? (msMode() ? '' : '<div class="campo"><label class="check"><input type="checkbox" name="withPassword" checked> Generar una contraseña temporal para que pueda entrar</label></div>')
       : (p.id !== S.user.id ? '<div class="campo"><label class="check"><input type="checkbox" name="active"' + (p.active !== false ? ' checked' : '') + '> Cuenta activa (si se desactiva, no puede entrar)</label></div>' : '')) +
     '</form>';
   return modalShell(isNew ? 'Nueva <b>persona</b>' : 'Editar <b>persona</b>', body, '<span class="esp"></span><button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="cerrar-modal">Cancelar</button><button class="rb-btn rb-btn--primario rb-btn--sm" type="submit" form="form-persona">' + (isNew ? 'Crear' : 'Guardar') + '</button>');
@@ -884,6 +1003,7 @@ async function submitSetup(form) {
 
 async function logout() {
   try { await api('POST', '/api/auth?action=logout'); } catch (e) { /* igual salimos */ }
+  if (msMode()) await salirDeMicrosoft();
   S.user = null; S.loaded = false; UI.modal = null; UI.view = null; UI.authError = null;
   history.replaceState(null, '', location.pathname);
   render();
@@ -918,6 +1038,7 @@ document.addEventListener('click', function (ev) {
   switch (act) {
     case 'nav': if (el.dataset.view) setView(el.dataset.view); break;
     case 'logout': logout(); break;
+    case 'ms-login': entrarConMicrosoft(); break;
     case 'cerrar-modal': closeModal(); break;
     case 'semana-prev': { const i = S.weeks.findIndex(function (w) { return w.idx === UI.weekIdx; }); if (i > 0) { UI.weekIdx = S.weeks[i - 1].idx; render(); } break; }
     case 'semana-next': { const i = S.weeks.findIndex(function (w) { return w.idx === UI.weekIdx; }); if (i >= 0 && i < S.weeks.length - 1) { UI.weekIdx = S.weeks[i + 1].idx; render(); } break; }

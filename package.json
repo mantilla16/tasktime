@@ -13,6 +13,7 @@
     "pg": "^8.23.1"
   },
   "devDependencies": {
+    "@azure/msal-browser": "^5.25.1",
     "@electric-sql/pglite": "^0.5.9"
   }
 }

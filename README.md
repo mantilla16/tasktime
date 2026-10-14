@@ -4,6 +4,29 @@ Aplicación web para asignar y consultar las horas presupuestadas del equipo de
 auditoría por cliente y semana. El Excel "PRESUPUESTO DE HORAS 2026" vive dentro
 de la app, con el diseño de marca de Russell Bedford.
 
+## Ingreso
+
+Se entra con la cuenta de Microsoft 365 de la firma (`@rbcol.co`), igual que
+analitica-puc y con el mismo registro de aplicación en Azure: MSAL obtiene un
+`id_token` en el navegador y el servidor lo verifica contra las claves del
+inquilino (firma, emisor, audiencia, vigencia y `tid`) antes de abrir sesión.
+No hay contraseñas.
+
+- La **primera persona** que entra cuando no existe ningún gerente queda como
+  gerente y se carga el presupuesto 2026.
+- Las personas cargadas del Excel no tienen correo: el gerente lo registra en
+  **Personas** para que al entrar se reconozcan con su rol. Quien entre con un
+  correo que no esté registrado queda como **junior**; el gerente puede cambiarle
+  el rol después.
+- Configuración (en el `.env` del servidor): `MS_TENANT_ID`, `MS_CLIENT_ID` y
+  `RB_DOMINIO` (también se aceptan `AUDITORIA_MS_TENANT`, `AUDITORIA_MS_CLIENTE`
+  y `AUDITORIA_DOMINIO`, los nombres de analitica-puc, para copiar el mismo
+  `.env`). En Azure, el registro de la aplicación debe tener como URI de
+  redirección (plataforma **SPA**) la dirección exacta de la app, por ejemplo
+  `https://servidor/tasktime/`.
+- Sin `MS_TENANT_ID`/`MS_CLIENT_ID` (desarrollo local) la app usa correo y
+  contraseña: la primera vez pide crear la cuenta de gerente.
+
 ## Roles
 
 | Rol | Qué puede hacer |

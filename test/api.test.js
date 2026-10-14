@@ -186,6 +186,10 @@ async function waitForServer() {
     r = await senior('PUT', '/api/budget', { rows: [{ clientId: nuevo.id, personId: paula.id, weekIdx: nueva.idx, hours: 6, phase: 'cierre' }] });
     assert.strictEqual(r.status, 200, 'se pueden asignar horas en las semanas nuevas');
 
+    /* ---- login con Microsoft: sin configurar responde 503, nunca abre sesión ---- */
+    r = await client()('POST', '/api/auth?action=microsoft', { idToken: 'a.b.c' });
+    assert.strictEqual(r.status, 503);
+
     /* ---- contraseña propia y cierre de sesión ---- */
     r = await junior('POST', '/api/auth?action=password', { current: 'mala', password: 'otra-clave-123' });
     assert.strictEqual(r.status, 400);
