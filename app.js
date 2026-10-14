@@ -233,6 +233,8 @@ async function boot() {
    reemplaza y MSAL ya no podría leerlo. */
 const MS_RETURN = /[#&](code|error|id_token|state)=/.test(location.hash);
 let msalApp = null;
+let msalRedirect = null;   // resultado de handleRedirectPromise en esta carga
+let msalRedirectError = null;
 
 function cargarMsal() {
   if (window.msal) return Promise.resolve(window.msal);
@@ -257,8 +259,24 @@ async function msalInstance() {
     cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false }
   });
   await app.initialize();
+  // MSAL exige llamar handleRedirectPromise en CADA carga: además de
+  // terminar el ingreso al volver de Microsoft, limpia el estado de un
+  // intento anterior que quedó a medias (si no, el siguiente clic falla
+  // con "interaction_in_progress").
+  try { msalRedirect = await app.handleRedirectPromise(); }
+  catch (err) { msalRedirectError = err; }
   msalApp = app;
   return app;
+}
+
+function limpiarEstadoMsal() {
+  [localStorage, sessionStorage].forEach(function (st) {
+    try {
+      Object.keys(st).forEach(function (k) {
+        if (k.indexOf('msal.') === 0 || k.indexOf('interaction.status') !== -1 || k.indexOf('login.microsoftonline.com') !== -1) st.removeItem(k);
+      });
+    } catch (e) { /* almacenamiento bloqueado */ }
+  });
 }
 
 function describirErrorMs(err) {
@@ -279,9 +297,20 @@ async function entrarConMicrosoft() {
   UI.authError = null;
   UI.msConectando = true;
   render();
+  const request = { scopes: ['openid', 'profile', 'email'], prompt: 'select_account', domainHint: S.dominio };
   try {
     const app = await msalInstance();
-    await app.loginRedirect({ scopes: ['openid', 'profile', 'email'], prompt: 'select_account', domainHint: S.dominio });
+    try {
+      await app.loginRedirect(request);
+    } catch (err) {
+      // Estado viejo de un intento a medias: se limpia y se reintenta una vez.
+      if (err && err.errorCode === 'interaction_in_progress') {
+        limpiarEstadoMsal();
+        await app.loginRedirect(request);
+      } else {
+        throw err;
+      }
+    }
   } catch (err) {
     UI.authError = describirErrorMs(err);
     UI.msConectando = false;
@@ -291,9 +320,10 @@ async function entrarConMicrosoft() {
 
 async function completarMicrosoft() {
   try {
-    const app = await msalInstance();
-    const result = await app.handleRedirectPromise();
+    await msalInstance();
     limpiarFragmento();
+    if (msalRedirectError) throw msalRedirectError;
+    const result = msalRedirect;
     if (!result || !result.idToken) { UI.msConectando = false; render(); return; }
     const r = await api('POST', '/api/auth?action=microsoft', { idToken: result.idToken });
     S.user = r.user;
@@ -312,12 +342,8 @@ async function completarMicrosoft() {
 }
 
 async function salirDeMicrosoft() {
-  try {
-    if (msalApp) await msalApp.clearCache();
-    Object.keys(localStorage).forEach(function (k) {
-      if (k.indexOf('msal.') === 0 || k.indexOf('login.microsoftonline.com') !== -1) localStorage.removeItem(k);
-    });
-  } catch (e) { /* que falle la limpieza no impide salir */ }
+  try { if (msalApp) await msalApp.clearCache(); } catch (e) { /* que falle la limpieza no impide salir */ }
+  limpiarEstadoMsal();
 }
 
 /* ============================ navegación ============================ */
