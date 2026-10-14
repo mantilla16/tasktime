@@ -45,14 +45,18 @@ sudo -u "$USUARIO" git fetch --all --prune
 sudo -u "$USUARIO" git reset --hard origin/main
 
 echo "== .env"
-if [ ! -f .env ]; then
+# Un .env sin clave (por ejemplo, vacío por un intento fallido) se regenera.
+if ! grep -qE '^POSTGRES_PASSWORD=.+' .env 2>/dev/null; then
   CLAVE_DB="$(head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | cut -c1-40)"
-  sed "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$CLAVE_DB/" .env.example > .env
+  sed "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$CLAVE_DB/" .env.example > .env.nuevo
+  mv .env.nuevo .env
   chmod 600 .env
   chown "$USUARIO:$USUARIO" .env
   echo "   Creado $RUTA/.env con una clave de Postgres aleatoria. Ajusta WEB_PORT si el 3100 está ocupado."
+  # Si Postgres llegó a crear su volumen sin clave, hay que empezarlo de cero.
+  sudo -u "$USUARIO" docker compose down -v --remove-orphans >/dev/null 2>&1 || true
 else
-  echo "   Ya existe .env; se conserva."
+  echo "   Ya existe .env con clave; se conserva."
 fi
 
 echo "== Primer arranque"
