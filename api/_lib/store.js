@@ -3,10 +3,12 @@
    Entidades: people (equipo y cuentas), clients, weeks (las 44 semanas con su
    cargabilidad) y budget (horas asignadas por cliente, persona y semana).
 
-   En producción (Vercel) se usa Neon a través de DATABASE_URL. Para trabajar en
-   el computador sin base remota, dev-server.js activa USE_PGLITE=1 y entonces se
-   usa PGlite: un Postgres embebido que guarda los datos en la carpeta .pglite/.
-   Ambos se consumen con la misma función etiquetada: sql`select ... ${valor}`.
+   Tres motores, una sola interfaz (sql`select ... ${valor}` devuelve filas):
+   - Postgres propio (servidor Ubuntu, Docker): DATABASE_URL=postgres://... con el
+     paquete `pg`.
+   - Neon (Vercel): si DATABASE_URL apunta a *.neon.tech se usa su driver HTTP.
+   - PGlite (desarrollo local sin base): server.js --dev activa USE_PGLITE=1 y
+     los datos quedan en la carpeta .pglite/.
 
    Los archivos y carpetas que empiezan por "_" no los publica Vercel como
    funciones: este módulo solo se importa desde las que sí lo son. */
@@ -18,7 +20,7 @@ const ROLES = ['gerente', 'senior', 'junior'];
 const PHASES = ['previas', 'planeacion', 'ejecucion', 'cierre', 'informe', 'vacaciones', 'compensatorio', 'especiales'];
 
 const MISSING_DB_MESSAGE =
-  'Falta la variable de entorno DATABASE_URL. Conecta la base de Neon en Vercel (Storage) y vuelve a desplegar.';
+  'Falta la variable de entorno DATABASE_URL (postgres://usuario:clave@host:5432/base).';
 
 // La integración Neon de Vercel inyecta DATABASE_URL; aceptamos alias por si acaso.
 function connectionString() {
@@ -59,18 +61,50 @@ function getPgliteSql() {
   return pgliteSql;
 }
 
+/* ---------- Postgres propio con `pg` ---------- */
+
+let pgSql = null;
+
+function getPgSql(cs) {
+  if (pgSql) return pgSql;
+  const { Pool } = require('pg');
+  const pool = new Pool({ connectionString: cs, max: 5 });
+  pool.on('error', function (err) { console.error('pg pool:', err.message); });
+  pgSql = async function (strings, ...values) {
+    let text = '';
+    strings.forEach(function (s, i) {
+      text += s;
+      if (i < values.length) text += '$' + (i + 1);
+    });
+    const params = values.map(function (v) { return v === undefined ? null : v; });
+    const r = await pool.query(text, params);
+    return r.rows;
+  };
+  return pgSql;
+}
+
 /* ---------- selección del motor ---------- */
 
 let neonSql = null;
 
+function isNeon(cs) {
+  const driver = (process.env.DB_DRIVER || '').toLowerCase();
+  if (driver === 'neon') return true;
+  if (driver === 'pg') return false;
+  return /neon\.tech/.test(cs);
+}
+
 function getSql() {
   const cs = connectionString();
   if (cs) {
-    if (!neonSql) {
-      const { neon } = require('@neondatabase/serverless');
-      neonSql = neon(cs);
+    if (isNeon(cs)) {
+      if (!neonSql) {
+        const { neon } = require('@neondatabase/serverless');
+        neonSql = neon(cs);
+      }
+      return neonSql;
     }
-    return neonSql;
+    return getPgSql(cs);
   }
   if (process.env.USE_PGLITE === '1') return getPgliteSql();
   return null;

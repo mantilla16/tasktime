@@ -1,0 +1,13 @@
+node_modules
+.git
+.github
+.claude
+.pglite*
+.env
+.env.*
+!.env.example
+CUENTAS-PRUEBA.local.md
+test
+scripts
+deploy
+*.md

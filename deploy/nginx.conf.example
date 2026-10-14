@@ -1,0 +1,21 @@
+# Sitio nginx para publicar la app con HTTPS delante del contenedor.
+# Copia a /etc/nginx/sites-available/tasktime, enlaza en sites-enabled,
+# cambia el dominio y obtén el certificado con: certbot --nginx -d horas.tudominio.com
+#
+# X-Forwarded-Proto es importante: con "https" la app marca la cookie de sesión
+# como Secure.
+
+server {
+    listen 80;
+    server_name horas.tudominio.com;
+
+    location / {
+        proxy_pass         http://127.0.0.1:3100;
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+}

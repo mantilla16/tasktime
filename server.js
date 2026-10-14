@@ -1,14 +1,14 @@
-/* Servidor local de desarrollo.
+/* Servidor HTTP de la app (producción y desarrollo).
 
-   Imita lo justo de Vercel para correr la app en el computador:
    - /api/<ruta>  -> require('./api/<ruta>.js') con req.query, req.body y
-                     res.status().json() como en las funciones de Vercel.
+                     res.status().json(), el mismo contrato que las funciones
+                     de Vercel, así el mismo código sirve en ambos entornos.
    - /            -> index.html; el resto se sirve como archivo estático.
 
-   Sin DATABASE_URL usa PGlite (Postgres embebido) guardando en .pglite/.
-
-   Uso:  npm run dev           (http://localhost:3000)
-         PORT=4000 npm run dev */
+   Producción:  DATABASE_URL=postgres://... node server.js   (npm start)
+   Desarrollo:  npm run dev  -> node server.js --dev: sin DATABASE_URL usa
+                PGlite (Postgres embebido) en .pglite/ y recarga los handlers
+                de /api en cada petición. */
 
 const http = require('http');
 const fs = require('fs');
@@ -16,8 +16,9 @@ const path = require('path');
 
 const ROOT = __dirname;
 const PORT = Number(process.env.PORT) || 3000;
+const DEV = process.argv.includes('--dev') || process.env.NODE_ENV === 'development';
 
-if (!process.env.DATABASE_URL && !process.env.POSTGRES_URL) {
+if (DEV && !process.env.DATABASE_URL && !process.env.POSTGRES_URL) {
   process.env.USE_PGLITE = '1';
 }
 
@@ -78,9 +79,11 @@ function resolveApi(pathname) {
 const server = http.createServer(async function (req, res) {
   const url = new URL(req.url, 'http://' + (req.headers.host || 'localhost'));
   const started = Date.now();
-  res.on('finish', function () {
-    console.log(req.method, url.pathname + url.search, res.statusCode, (Date.now() - started) + 'ms');
-  });
+  if (DEV) {
+    res.on('finish', function () {
+      console.log(req.method, url.pathname + url.search, res.statusCode, (Date.now() - started) + 'ms');
+    });
+  }
 
   if (url.pathname.startsWith('/api/')) {
     const file = resolveApi(url.pathname);
@@ -92,9 +95,11 @@ const server = http.createServer(async function (req, res) {
     req.body = await readBody(req);
     try {
       // En desarrollo recargamos el handler en cada petición para ver cambios sin reiniciar.
-      Object.keys(require.cache).forEach(function (k) {
-        if (k.startsWith(path.join(ROOT, 'api')) && !k.includes('_lib')) delete require.cache[k];
-      });
+      if (DEV) {
+        Object.keys(require.cache).forEach(function (k) {
+          if (k.startsWith(path.join(ROOT, 'api')) && !k.includes('_lib')) delete require.cache[k];
+        });
+      }
       await require(file)(req, res);
     } catch (err) {
       console.error(err);
@@ -116,6 +121,9 @@ const server = http.createServer(async function (req, res) {
   });
 });
 
-server.listen(PORT, function () {
-  console.log('Russell en http://localhost:' + PORT + (process.env.USE_PGLITE === '1' ? '  (base local PGlite en .pglite/)' : '  (Neon)'));
+server.listen(PORT, '0.0.0.0', function () {
+  const motor = process.env.USE_PGLITE === '1' ? 'base local PGlite en .pglite/' : 'Postgres';
+  console.log('Russell · horas por cliente en http://localhost:' + PORT + '  (' + motor + (DEV ? ', modo desarrollo' : '') + ')');
 });
+
+process.on('SIGTERM', function () { server.close(function () { process.exit(0); }); });

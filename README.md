@@ -25,11 +25,43 @@ horas de otras personas, haga lo que haga el navegador.
 - **Ajustes**: cambiar la propia contraseña; el gerente puede recargar el presupuesto base.
 - **Mi semana / Mi presupuesto** (junior): sus horas por cliente, en la semana elegida y en todo el periodo.
 
-## Primer uso
+## Despliegue en el servidor Ubuntu
 
-1. Despliega en Vercel con la integración de Neon (`DATABASE_URL`).
-2. Abre la app: la primera vez pide crear la cuenta del **gerente** y carga el presupuesto 2026 (24 clientes, 7 funcionarios, 44 semanas).
-3. En **Personas**, edita a cada funcionario para ponerle su correo y pulsa el icono de llave para asignarle una contraseña temporal. Compártela por un canal seguro; deberá cambiarla al entrar.
+Mismo esquema que los otros proyectos del servidor: Docker Compose y despliegue
+automático por SSH desde GitHub Actions en cada push a `main`.
+
+1. **Una sola vez, en el servidor** (como root):
+
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/mantilla16/tasktime/main/deploy/instalar_servidor.sh -o instalar_servidor.sh
+   sudo bash instalar_servidor.sh https://github.com/mantilla16/tasktime.git /opt/tasktime bot
+   ```
+
+   Instala Docker si falta, clona el repo en `/opt/tasktime`, crea `.env` con una
+   clave de Postgres aleatoria, genera (o reutiliza) la clave SSH de despliegue y
+   levanta los contenedores. La app queda escuchando en `127.0.0.1:3100`
+   (cámbialo en `.env` con `WEB_PORT` si ese puerto ya está en uso).
+2. **Publicar con HTTPS**: copia `deploy/nginx.conf.example` a
+   `/etc/nginx/sites-available/tasktime`, pon tu dominio y corre `certbot --nginx`.
+3. **Secretos en GitHub** (Settings → Secrets and variables → Actions):
+   `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KEY`, `DEPLOY_PATH`. Si el servidor ya
+   despliega otro proyecto con el mismo usuario, los tres primeros son los mismos;
+   solo cambia `DEPLOY_PATH` (`/opt/tasktime`).
+4. Abre la URL: la primera vez pide crear la cuenta del **gerente** y carga el
+   presupuesto 2026 (24 clientes, 7 funcionarios, 44 semanas). Luego, en
+   **Personas**, registra el correo de cada funcionario y asígnale una contraseña
+   temporal con el icono de llave.
+
+Desde entonces, cada push a `main` corre las pruebas y, si pasan, actualiza el
+servidor (`docker compose build && up -d`). Los datos viven en el volumen
+`pgdata` y sobreviven a los despliegues. Copia de seguridad:
+
+```bash
+docker compose exec db pg_dump -U tasktime tasktime > respaldo.sql
+```
+
+La app también puede correr en Vercel con Neon: si `DATABASE_URL` apunta a
+`*.neon.tech` usa el driver de Neon automáticamente.
 
 ## Desarrollo local
 
@@ -91,5 +123,7 @@ todos los colores de esos tokens.
 | `api/budget.js` | Horas por cliente, persona y semana; filtra por rol. |
 | `api/_lib/store.js` | Acceso a Postgres (Neon o PGlite), esquema y carga del presupuesto. |
 | `api/_lib/auth.js` | Contraseñas (scrypt), sesiones (cookie HttpOnly) y comprobación de rol. |
-| `dev-server.js` | Servidor local que imita las funciones de Vercel. |
+| `server.js` | Servidor HTTP (producción con `npm start`, desarrollo con `npm run dev`). |
+| `Dockerfile`, `docker-compose.yml`, `deploy/` | Despliegue en el servidor Ubuntu (ver abajo). |
+| `.github/workflows/` | Pruebas en cada push y despliegue automático a `main`. |
 | `test/api.test.js` | Prueba de extremo a extremo del API. |

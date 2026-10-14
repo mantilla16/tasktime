@@ -1,6 +1,6 @@
 /* Prueba de extremo a extremo del API contra el servidor local con PGlite.
 
-   Levanta dev-server.js en un puerto libre con una base temporal, recorre el
+   Levanta server.js --dev en un puerto libre con una base temporal, recorre el
    flujo completo (configuración inicial, cuentas, clientes, asignación de
    horas) y comprueba sobre todo las reglas de visibilidad por rol.
 
@@ -17,7 +17,7 @@ const BASE = 'http://localhost:' + PORT;
 const ROOT = path.join(__dirname, '..');
 
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'russell-test-'));
-const server = spawn(process.execPath, [path.join(ROOT, 'dev-server.js')], {
+const server = spawn(process.execPath, [path.join(ROOT, 'server.js'), '--dev'], {
   cwd: ROOT,
   env: Object.assign({}, process.env, { PORT: String(PORT), PGLITE_DATA_DIR: dataDir, DATABASE_URL: '', POSTGRES_URL: '' }),
   stdio: ['ignore', 'pipe', 'inherit']

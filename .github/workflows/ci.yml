@@ -1,0 +1,20 @@
+# Pruebas en cada push y pull request. Corren contra PGlite (Postgres embebido),
+# así que no necesitan base de datos ni secretos.
+name: pruebas
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm test

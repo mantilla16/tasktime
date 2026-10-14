@@ -4,11 +4,13 @@
   "private": true,
   "description": "Russell Bedford — asignación de horas por cliente para el equipo de auditoría, con roles (gerente, senior, junior). Estado en Neon.",
   "scripts": {
-    "dev": "node dev-server.js",
+    "start": "node server.js",
+    "dev": "node server.js --dev",
     "test": "node test/api.test.js"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^1.1.0"
+    "@neondatabase/serverless": "^1.1.0",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.9"

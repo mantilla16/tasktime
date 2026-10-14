@@ -1,0 +1,51 @@
+# Despliegue al servidor Ubuntu en cada push a main, después de que pasen las
+# pruebas. Entra por SSH, actualiza el código y reconstruye los contenedores.
+#
+# Secretos que hay que crear en GitHub (Settings > Secrets and variables > Actions):
+#   DEPLOY_HOST   IP o nombre del servidor
+#   DEPLOY_USER   usuario Linux con acceso a docker (ej. bot)
+#   DEPLOY_KEY    clave privada SSH (ed25519) cuyo .pub está en authorized_keys del servidor
+#   DEPLOY_PATH   carpeta del repositorio en el servidor (ej. /opt/tasktime)
+# El .env del servidor se crea a mano una sola vez con deploy/instalar_servidor.sh
+# y nunca viaja por GitHub.
+name: desplegar
+
+on:
+  push:
+    branches: ["main"]
+
+concurrency:
+  group: despliegue-tasktime
+  cancel-in-progress: false
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  desplegar:
+    needs: pruebas
+    runs-on: ubuntu-latest
+    steps:
+      - name: Desplegar por SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          script_stop: true
+          script: |
+            cd "${{ secrets.DEPLOY_PATH }}"
+            git fetch --all --prune
+            git reset --hard origin/main
+            docker compose build --pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+            docker compose ps

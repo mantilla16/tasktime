@@ -1,0 +1,38 @@
+# Despliegue en el servidor Ubuntu. Dos servicios:
+#   web  la app (Node) escuchando solo en localhost:${WEB_PORT}; un proxy
+#        (nginx o Caddy) la expone con HTTPS, ver deploy/nginx.conf.example
+#   db   Postgres 16 con los datos en un volumen, para que sobrevivan a cada
+#        despliegue. La clave llega por .env (nunca viaja por GitHub).
+services:
+  web:
+    build: .
+    image: tasktime:latest
+    env_file: .env
+    environment:
+      PORT: "3000"
+      DATABASE_URL: postgres://tasktime:${POSTGRES_PASSWORD}@db:5432/tasktime
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3100}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: tasktime
+      POSTGRES_USER: tasktime
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: America/Bogota
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tasktime -d tasktime"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
