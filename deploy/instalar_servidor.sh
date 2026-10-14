@@ -40,6 +40,9 @@ if [ ! -d "$RUTA/.git" ]; then
 fi
 chown -R "$USUARIO:$USUARIO" "$RUTA"
 cd "$RUTA"
+# Si el clon ya existía, ponerlo en la última versión de main.
+sudo -u "$USUARIO" git fetch --all --prune
+sudo -u "$USUARIO" git reset --hard origin/main
 
 echo "== .env"
 if [ ! -f .env ]; then
