@@ -1,36 +1,35 @@
-# Russell — tareas y presupuesto de horas del equipo
+# Russell Bedford — horas por cliente
 
-Aplicación web para asignar y seguir las tareas del equipo de auditoría y ver
-el presupuesto de horas por cliente y semana (el Excel "PRESUPUESTO DE HORAS
-2026" vive dentro de la app).
+Aplicación web para asignar y consultar las horas presupuestadas del equipo de
+auditoría por cliente y semana. El Excel "PRESUPUESTO DE HORAS 2026" vive dentro
+de la app, con el diseño de marca de Russell Bedford.
 
 ## Roles
 
 | Rol | Qué puede hacer |
 |---|---|
-| **Gerente** | Todo: ver y asignar tareas a cualquiera, editar el presupuesto, administrar clientes, personas (cuentas, roles, contraseñas) y la cuenta de correo. |
-| **Senior** | Ve todas las tareas y el presupuesto del equipo, crea y asigna tareas, edita el presupuesto y los clientes. No administra cuentas. |
-| **Junior** | Solo ve **sus** tareas (Mis tareas) y **su** presupuesto (Mi semana). Puede cambiar el estado, registrar horas invertidas y dejar avances. |
+| **Gerente** | Todo: ver y asignar horas a cualquiera, administrar clientes y personas (cuentas, roles, contraseñas), recargar el presupuesto base. |
+| **Senior** | Ve las horas de todo el equipo y asigna horas a cualquiera. Administra clientes. No administra cuentas. |
+| **Junior** | Solo ve **sus** horas (Mi semana y Mi presupuesto). No edita nada salvo su contraseña. |
 
 La restricción se aplica en el servidor: a un junior el API nunca le devuelve
-tareas ni presupuesto de otras personas, haga lo que haga el navegador.
+horas de otras personas, haga lo que haga el navegador.
 
 ## Pantallas
 
-- **Panel** (gerente/senior): tareas abiertas, vencidas, en revisión, sin asignar; carga de la semana actual por persona frente a la cargabilidad; próximas a vencer.
-- **Tareas**: tablero (arrastrar entre estados) o lista, con filtros por persona, cliente, fase y prioridad. Al asignar una tarea se envía aviso por correo si hay cuenta de Google conectada.
-- **Equipo**: tarjetas por persona y mapa de carga semanal (horas presupuestadas vs. cargabilidad; rojo = sobrecarga).
-- **Presupuesto**: la cuadrícula del Excel (cliente × funcionario × semana) con las fases por color. Gerente y senior editan celdas; se puede agregar filas.
-- **Clientes**: equipo asignado según el presupuesto, tareas abiertas y horas.
-- **Personas** (solo gerente): crear personas, cambiar rol, dar acceso con una contraseña temporal (la persona debe cambiarla al entrar), desactivar cuentas.
-- **Ajustes**: cambiar la propia contraseña; el gerente conecta la cuenta de Google para los avisos y puede recargar el presupuesto base.
+- **Semana** (gerente/senior): selector de semana, indicadores (horas asignadas, clientes con horas, personas sobre la cargabilidad o sin horas) y una tarjeta por persona con sus clientes, fase y horas. Desde ahí se asignan clientes y se editan o quitan horas.
+- **Presupuesto**: la cuadrícula anual del Excel (cliente × funcionario × semana) con las fases por color; editable celda a celda.
+- **Equipo**: tarjetas por persona y mapa de carga semanal (naranja = por encima de la cargabilidad).
+- **Clientes**: equipo asignado, horas de la semana y del periodo.
+- **Personas** (solo gerente): crear personas, cambiar rol, dar acceso con una contraseña temporal, desactivar cuentas.
+- **Ajustes**: cambiar la propia contraseña; el gerente puede recargar el presupuesto base.
+- **Mi semana / Mi presupuesto** (junior): sus horas por cliente, en la semana elegida y en todo el periodo.
 
 ## Primer uso
 
 1. Despliega en Vercel con la integración de Neon (`DATABASE_URL`).
-2. Abre la app: la primera vez pide crear la cuenta del **gerente** y carga el presupuesto 2026 (clientes, 7 funcionarios, 44 semanas).
-3. En **Personas**, edita a cada funcionario para ponerle su correo y pulsa el icono de llave para asignarle una contraseña temporal. Compártela por un canal seguro.
-4. Para los avisos por correo sigue `CONFIGURACION.md` (Google Cloud + dos variables en Vercel) y conecta la cuenta en **Ajustes**.
+2. Abre la app: la primera vez pide crear la cuenta del **gerente** y carga el presupuesto 2026 (24 clientes, 7 funcionarios, 44 semanas).
+3. En **Personas**, edita a cada funcionario para ponerle su correo y pulsa el icono de llave para asignarle una contraseña temporal. Compártela por un canal seguro; deberá cambiarla al entrar.
 
 ## Desarrollo local
 
@@ -40,15 +39,14 @@ npm run dev
 ```
 
 Abre <http://localhost:3000>. Sin `DATABASE_URL` se usa una base Postgres
-embebida (PGlite) guardada en `.pglite/`; bórrala para empezar de cero. Con
-`DATABASE_URL` definida se usa Neon.
+embebida (PGlite) guardada en `.pglite/`; bórrala para empezar de cero.
 
 ```bash
 npm test
 ```
 
 Levanta un servidor temporal y recorre el flujo completo del API (configuración
-inicial, roles, visibilidad por rol, presupuesto, sesiones).
+inicial, roles, visibilidad por rol, asignación de horas, sesiones).
 
 ## Datos base
 
@@ -59,28 +57,26 @@ python scripts/presupuesto_a_json.py "PRESUPUESTO DE HORAS 2026.xlsx"
 ```
 
 Las semanas van del lunes 1 de junio de 2026 al 29 de marzo de 2027. La fase
-de cada celda sale del color de relleno de la hoja (leyenda al pie del Excel).
-Para volver a cargar el archivo en una base ya creada: Ajustes → *Recargar
-presupuesto base* (solo el gerente); no borra tareas ni cuentas.
+de cada celda sale del color de relleno de la hoja. Para volver a cargar el
+archivo en una base ya creada: Ajustes → *Recargar presupuesto base*.
+
+## Marca
+
+`assets/tokens.css` y los logos vienen de los lineamientos de diseño de Russell
+Bedford: paleta oficial, tipografía Lato, logo arriba a la izquierda y franja de
+marca al pie. El CSS propio de la app (`index.html`) solo define layout y toma
+todos los colores de esos tokens.
 
 ## Estructura
 
 | Ruta | Qué hace |
 |---|---|
-| `index.html`, `app.js` | Interfaz (sin frameworks). |
+| `index.html`, `app.js`, `assets/` | Interfaz (sin frameworks) y recursos de marca. |
 | `api/auth.js` | Sesión: configuración inicial, entrar, salir, cambiar contraseña. |
 | `api/people.js` | Personas y roles (gerente). |
 | `api/clients.js` | Clientes. |
-| `api/tasks.js` | Tareas y avances; filtra por rol. |
-| `api/budget.js` | Presupuesto semanal; filtra por rol. |
-| `api/mail.js` | Avisos por correo con la API de Gmail. |
-| `api/auth/google/*` | OAuth de Google para la cuenta remitente (gerente). |
+| `api/budget.js` | Horas por cliente, persona y semana; filtra por rol. |
 | `api/_lib/store.js` | Acceso a Postgres (Neon o PGlite), esquema y carga del presupuesto. |
 | `api/_lib/auth.js` | Contraseñas (scrypt), sesiones (cookie HttpOnly) y comprobación de rol. |
 | `dev-server.js` | Servidor local que imita las funciones de Vercel. |
 | `test/api.test.js` | Prueba de extremo a extremo del API. |
-
-Seguridad: las contraseñas se guardan con scrypt y sal; la sesión es un token
-aleatorio en cookie `HttpOnly` cuyo hash se guarda en la base; los tokens de
-Google nunca llegan al navegador; `POST /api/mail` arma el correo en el
-servidor a partir de la tarea guardada y solo escribe a la persona asignada.

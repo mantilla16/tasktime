@@ -1,0 +1,224 @@
+/* ==========================================================================
+   Russell Bedford — tokens de diseño
+   Paleta oficial, tipografía Lato y componentes base.
+   Importar con <link rel="stylesheet" href="tokens.css"> o pegar en <style>.
+   Requiere Lato:
+   <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700&display=swap" rel="stylesheet">
+   ========================================================================== */
+
+:root {
+  /* --- Paleta oficial (100 %) --- */
+  --rb-azul:        #001871;  /* Azul Russell / Space Blue — color maestro */
+  --rb-azul-oscuro: #00046B;  /* variante profunda */
+  --rb-jade:        #00BFB3;  /* Sea Green — acento principal */
+  --rb-turquesa:    #00A9CE;  /* Sky Blue — segundo acento, checks, enlaces */
+  --rb-naranja:     #EB8E03;  /* Earth Orange — CTA / atención */
+  --rb-morado:      #981D97;  /* Mind Magenta — acento ocasional */
+  --rb-gris:        #939598;  /* Gris RB — texto secundario, bordes */
+  --rb-blanco:      #FFFFFF;
+
+  /* --- Tintes aprobados (80 / 60 / 40 / 20 / 10 %) --- */
+  --rb-azul-80: #334677;  --rb-azul-60: #66749A;  --rb-azul-40: #99A3BC;  --rb-azul-20: #CCD1DE;  --rb-azul-10: #E6E8F1;
+  --rb-jade-80: #33CCC2;  --rb-jade-60: #66D9D1;  --rb-jade-40: #99E5E1;  --rb-jade-20: #CCF2F0;  --rb-jade-10: #E6F9F7;
+  --rb-turquesa-80: #33BAD8; --rb-turquesa-60: #66CBE2; --rb-turquesa-40: #99DDEB; --rb-turquesa-20: #CCEEF5; --rb-turquesa-10: #E6F6FA;
+  --rb-naranja-80: #EFA535; --rb-naranja-60: #F3BB68; --rb-naranja-40: #F7D29A; --rb-naranja-20: #FBE8CD; --rb-naranja-10: #FDF4E6;
+  --rb-morado-80: #AD4AAC; --rb-morado-60: #C177C1; --rb-morado-40: #D6A5D5; --rb-morado-20: #EAD2EA; --rb-morado-10: #F5E8F5;
+  --rb-gris-80: #A9AAAD;  --rb-gris-60: #BEBFC1;  --rb-gris-40: #D4D5D6;  --rb-gris-20: #E9EAEA;  --rb-gris-10: #F4F4F5;
+
+  /* --- Semánticos --- */
+  --rb-bg:             var(--rb-blanco);
+  --rb-superficie:     var(--rb-blanco);
+  --rb-superficie-2:   var(--rb-gris-10);
+  --rb-texto:          var(--rb-azul);     /* titulares y texto principal */
+  --rb-texto-cuerpo:   #2B2B2B;            /* párrafos largos */
+  --rb-texto-2:        var(--rb-gris);
+  --rb-borde:          var(--rb-gris-40);
+  --rb-primario:       var(--rb-azul);
+  --rb-primario-hover: var(--rb-azul-oscuro);
+  --rb-acento:         var(--rb-jade);
+  --rb-enlace:         var(--rb-turquesa);
+  --rb-exito:          var(--rb-jade);
+  --rb-info:           var(--rb-turquesa);
+  --rb-aviso:          var(--rb-naranja);
+  --rb-error:          #7A1679;            /* morado oscuro: la paleta no tiene rojo */
+  --rb-logo:           url("logo-rb-azul.png");
+
+  /* --- Tipografía y forma --- */
+  --rb-fuente: 'Lato', 'Segoe UI', Arial, sans-serif;
+  --rb-radio: 10px;
+  --rb-radio-pildora: 999px;
+  --rb-sombra: 0 2px 12px rgba(0, 24, 113, .08);   /* la única sombra permitida */
+  --rb-margen: 32px;
+
+  /* --- Gráficos: orden de series --- */
+  --rb-serie-1: var(--rb-azul);
+  --rb-serie-2: var(--rb-jade);
+  --rb-serie-3: var(--rb-turquesa);
+  --rb-serie-4: var(--rb-naranja);
+  --rb-serie-5: var(--rb-morado);
+  --rb-serie-6: var(--rb-gris);
+}
+
+/* Modo oscuro: fondos azules corporativos, logo blanco */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --rb-bg:             var(--rb-azul-oscuro);
+    --rb-superficie:     var(--rb-azul);
+    --rb-superficie-2:   #0B2280;
+    --rb-texto:          var(--rb-blanco);
+    --rb-texto-cuerpo:   #E6E8F1;
+    --rb-texto-2:        var(--rb-azul-40);
+    --rb-borde:          var(--rb-azul-80);
+    --rb-primario:       var(--rb-jade);
+    --rb-primario-hover: var(--rb-jade-80);
+    --rb-sombra:         none;
+    --rb-logo:           url("logo-rb-blanco.png");
+    --rb-logo-img:       0;
+  }
+}
+:root[data-theme="dark"] {
+  --rb-bg:             var(--rb-azul-oscuro);
+  --rb-superficie:     var(--rb-azul);
+  --rb-superficie-2:   #0B2280;
+  --rb-texto:          var(--rb-blanco);
+  --rb-texto-cuerpo:   #E6E8F1;
+  --rb-texto-2:        var(--rb-azul-40);
+  --rb-borde:          var(--rb-azul-80);
+  --rb-primario:       var(--rb-jade);
+  --rb-primario-hover: var(--rb-jade-80);
+  --rb-sombra:         none;
+  --rb-logo:           url("logo-rb-blanco.png");
+  --rb-logo-img:       0;
+}
+
+/* ---------- Base ---------- */
+html { font-family: var(--rb-fuente); color: var(--rb-texto-cuerpo); background: var(--rb-bg); }
+body { margin: 0; font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; background: var(--rb-bg); }
+h1, h2, h3, h4 { color: var(--rb-texto); font-weight: 700; line-height: 1.2; margin: 0 0 .5em; }
+h1 { font-size: 2.25rem; font-weight: 300; font-style: italic; }   /* "Lineamientos de <b>Diseño</b>" */
+h1 b, h1 strong { font-weight: 700; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.2rem; }
+p { margin: 0 0 1em; text-align: left; }
+a { color: var(--rb-enlace); text-decoration: none; }
+a:hover { text-decoration: underline; }
+small, .rb-secundario { color: var(--rb-texto-2); font-size: .875rem; }
+.rb-contenedor { max-width: 1120px; margin: 0 auto; padding: 0 var(--rb-margen); }
+
+/* ---------- Franja de marca (5 colores, orden oficial) ---------- */
+.rb-franja { display: flex; height: 6px; width: 100%; }
+.rb-franja span { flex: 1; }
+.rb-franja span:nth-child(1) { background: var(--rb-azul); }
+.rb-franja span:nth-child(2) { background: var(--rb-morado); }
+.rb-franja span:nth-child(3) { background: var(--rb-jade); }
+.rb-franja span:nth-child(4) { background: var(--rb-naranja); }
+.rb-franja span:nth-child(5) { background: var(--rb-turquesa); }
+/* Versión en gradiente para pseudo-elementos o bordes */
+.rb-franja-gradiente {
+  background: linear-gradient(90deg,
+    var(--rb-azul) 0 20%, var(--rb-morado) 20% 40%, var(--rb-jade) 40% 60%,
+    var(--rb-naranja) 60% 80%, var(--rb-turquesa) 80% 100%);
+}
+
+/* ---------- Header con logo arriba a la izquierda ---------- */
+.rb-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px var(--rb-margen); background: var(--rb-superficie);
+  border-bottom: 1px solid var(--rb-borde);
+}
+.rb-logo { display: block; width: 180px; height: 60px; background: var(--rb-logo) left center / contain no-repeat; margin: 4px 24px 4px 0; }
+/* El <img> azul se oculta en modo oscuro y el fondo muestra el logo blanco (--rb-logo) */
+.rb-logo img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: left center; opacity: var(--rb-logo-img, 1); }
+.rb-header--azul { background: var(--rb-azul); border: 0; color: var(--rb-blanco); }
+.rb-header--azul .rb-logo { background-image: url("logo-rb-blanco.png"); }
+.rb-nav a { color: inherit; margin-left: 24px; font-weight: 700; }
+.rb-nav a.activo { color: var(--rb-jade); }
+
+/* ---------- Botones ---------- */
+.rb-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: 700 .95rem/1 var(--rb-fuente); padding: 12px 22px;
+  border-radius: var(--rb-radio-pildora); border: 2px solid transparent;
+  cursor: pointer; transition: background .2s, color .2s, border-color .2s;
+}
+.rb-btn--primario { background: var(--rb-primario); color: var(--rb-blanco); }
+.rb-btn--primario:hover { background: var(--rb-primario-hover); }
+.rb-btn--secundario { background: transparent; color: var(--rb-primario); border-color: var(--rb-primario); }
+.rb-btn--secundario:hover { background: var(--rb-azul-10); }
+.rb-btn--cta { background: var(--rb-naranja); color: var(--rb-blanco); }   /* uno solo por pieza */
+.rb-btn--cta:hover { background: var(--rb-naranja-80); }
+.rb-btn--jade { background: var(--rb-jade); color: var(--rb-blanco); }
+.rb-btn:disabled { background: var(--rb-gris-40); color: var(--rb-gris); border-color: transparent; cursor: not-allowed; }
+
+/* ---------- Chips / píldoras ---------- */
+.rb-chip {
+  display: inline-block; padding: 4px 12px; border-radius: var(--rb-radio-pildora);
+  font-size: .8rem; font-weight: 700; line-height: 1.4;
+  background: var(--rb-jade); color: var(--rb-blanco);
+}
+.rb-chip--turquesa { background: var(--rb-turquesa); }
+.rb-chip--naranja  { background: var(--rb-naranja); }
+.rb-chip--morado   { background: var(--rb-morado); }
+.rb-chip--azul     { background: var(--rb-azul); }
+.rb-chip--gris     { background: var(--rb-gris-20); color: var(--rb-azul); }
+.rb-chip--suave    { background: var(--rb-jade-20); color: var(--rb-azul); }
+/* Resaltar una frase dentro de un título (como en los posts de RB) */
+.rb-resalte { background: var(--rb-jade); color: var(--rb-blanco); padding: 2px 10px; border-radius: 6px; }
+
+/* ---------- Tarjetas ---------- */
+.rb-tarjeta {
+  background: var(--rb-superficie); border: 1px solid var(--rb-borde);
+  border-radius: var(--rb-radio); padding: 24px; box-shadow: var(--rb-sombra);
+}
+.rb-tarjeta--destacada { border-top: 4px solid var(--rb-jade); }
+.rb-tarjeta--azul { background: var(--rb-azul); color: var(--rb-blanco); border: 0; }
+.rb-tarjeta--azul h2, .rb-tarjeta--azul h3 { color: var(--rb-blanco); }
+
+/* ---------- Lista con check turquesa (viñeta de marca) ---------- */
+.rb-lista { list-style: none; padding: 0; margin: 0 0 1em; }
+.rb-lista li { position: relative; padding-left: 28px; margin-bottom: .5em; }
+.rb-lista li::before {
+  content: ""; position: absolute; left: 2px; top: .35em; width: 14px; height: 7px;
+  border-left: 3px solid var(--rb-turquesa); border-bottom: 3px solid var(--rb-turquesa);
+  transform: rotate(-45deg);
+}
+
+/* ---------- Tablas ---------- */
+.rb-tabla { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.rb-tabla th { background: var(--rb-azul); color: var(--rb-blanco); text-align: left; padding: 12px 14px; font-weight: 700; }
+.rb-tabla td { padding: 11px 14px; border-bottom: 1px solid var(--rb-gris-20); }
+.rb-tabla tbody tr:nth-child(even) td { background: var(--rb-azul-10); }
+.rb-tabla tbody tr:hover td { background: var(--rb-jade-10); }
+
+/* ---------- Formularios ---------- */
+.rb-input, .rb-select, .rb-textarea {
+  font: 400 1rem var(--rb-fuente); color: var(--rb-texto-cuerpo);
+  background: var(--rb-superficie); border: 1px solid var(--rb-gris-60);
+  border-radius: 8px; padding: 10px 14px; width: 100%; box-sizing: border-box;
+}
+.rb-input:focus, .rb-select:focus, .rb-textarea:focus {
+  outline: none; border-color: var(--rb-turquesa); box-shadow: 0 0 0 3px var(--rb-turquesa-20);
+}
+.rb-etiqueta { display: block; font-weight: 700; color: var(--rb-texto); margin-bottom: 6px; font-size: .9rem; }
+
+/* ---------- Estados / alertas ---------- */
+.rb-alerta { padding: 12px 16px; border-radius: 8px; border-left: 4px solid; font-size: .95rem; }
+.rb-alerta--exito { background: var(--rb-jade-10);     border-color: var(--rb-exito); color: var(--rb-azul); }
+.rb-alerta--info  { background: var(--rb-turquesa-10); border-color: var(--rb-info);  color: var(--rb-azul); }
+.rb-alerta--aviso { background: var(--rb-naranja-10);  border-color: var(--rb-aviso); color: var(--rb-azul); }
+.rb-alerta--error { background: var(--rb-morado-10);   border-color: var(--rb-error); color: var(--rb-azul); }
+
+/* ---------- Indicadores (KPI) ---------- */
+.rb-kpi { padding: 20px 24px; border-radius: var(--rb-radio); background: var(--rb-superficie); border: 1px solid var(--rb-borde); }
+.rb-kpi .valor { font-size: 2rem; font-weight: 700; color: var(--rb-texto); line-height: 1.1; }
+.rb-kpi .etiqueta { color: var(--rb-texto-2); font-size: .85rem; margin-top: 4px; }
+
+/* ---------- Pie ---------- */
+.rb-pie { padding: 20px var(--rb-margen); color: var(--rb-texto-2); font-size: .85rem; display: flex; justify-content: space-between; align-items: center; }
+
+@media (max-width: 640px) {
+  :root { --rb-margen: 16px; }
+  h1 { font-size: 1.75rem; }
+  .rb-header { flex-wrap: wrap; gap: 12px; }
+  .rb-logo { width: 140px; height: 47px; }
+}

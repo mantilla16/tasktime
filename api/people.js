@@ -23,17 +23,12 @@ module.exports = async function handler(req, res) {
       const user = await auth.requireUser(req, res, sql);
       if (!user) return;
       const rows = await sql`
-        select p.id, p.name, p.email, p.role, p.active, p.password_hash, p.must_change_password, p.created_at,
-               (select count(*)::int from tasks t where t.assignee_id = p.id and t.status <> 'terminada') as open_tasks
+        select p.id, p.name, p.email, p.role, p.active, p.password_hash, p.must_change_password, p.created_at
           from people p
          order by case p.role when 'gerente' then 0 when 'senior' then 1 else 2 end, p.name`;
       if (auth.canManage(user)) {
         return res.status(200).json({
-          people: rows.map(function (r) {
-            const p = auth.publicPerson(r);
-            p.openTasks = Number(r.open_tasks) || 0;
-            return p;
-          })
+          people: rows.map(auth.publicPerson)
         });
       }
       // Junior: nombres para mostrar quién creó o comentó una tarea; nada más.

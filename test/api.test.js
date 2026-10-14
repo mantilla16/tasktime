@@ -1,8 +1,8 @@
 /* Prueba de extremo a extremo del API contra el servidor local con PGlite.
 
    Levanta dev-server.js en un puerto libre con una base temporal, recorre el
-   flujo completo (configuración inicial, cuentas, tareas, presupuesto) y
-   comprueba sobre todo las reglas de visibilidad por rol.
+   flujo completo (configuración inicial, cuentas, clientes, asignación de
+   horas) y comprueba sobre todo las reglas de visibilidad por rol.
 
    Uso: npm test */
 
@@ -80,6 +80,7 @@ async function waitForServer() {
     const people = r.body.people;
     const roberto = people.find(function (p) { return p.name === 'Roberto Gonzalez'; });
     const paula = people.find(function (p) { return p.name === 'Paula Ariza'; });
+    const arleidis = people.find(function (p) { return p.name === 'Arleidis Alvarez'; });
     assert.ok(roberto && roberto.role === 'senior');
     assert.ok(paula && paula.role === 'junior');
     assert.strictEqual(roberto.hasPassword, false);
@@ -98,7 +99,7 @@ async function waitForServer() {
     r = await junior('POST', '/api/auth?action=login', { email: 'PAULA@ejemplo.test', password: 'clave-paula-1' });
     assert.strictEqual(r.status, 200);
 
-    /* ---- el junior no administra personas ---- */
+    /* ---- solo el gerente administra personas ---- */
     r = await junior('POST', '/api/people', { name: 'Intruso', role: 'gerente' });
     assert.strictEqual(r.status, 403);
     r = await senior('POST', '/api/people', { name: 'Intruso', role: 'gerente' });
@@ -114,101 +115,53 @@ async function waitForServer() {
     assert.ok(kaia);
     r = await junior('POST', '/api/clients', { name: 'Nuevo' });
     assert.strictEqual(r.status, 403);
-
-    /* ---- tareas: el senior asigna, el junior solo ve lo suyo ---- */
-    r = await senior('POST', '/api/tasks', {
-      title: 'Conciliación bancaria', clientId: kaia.id, phase: 'ejecucion', assigneeId: paula.id,
-      priority: 'alta', dueDate: '2026-10-20', hoursBudget: 12
-    });
-    assert.strictEqual(r.status, 201, JSON.stringify(r.body));
-    const tPaula = r.body.task;
-    assert.strictEqual(tPaula.assigneeName, 'Paula Ariza');
-    assert.strictEqual(tPaula.dueDate, '2026-10-20');
-
-    const arleidis = people.find(function (p) { return p.name === 'Arleidis Alvarez'; });
-    r = await senior('POST', '/api/tasks', { title: 'Inventarios', assigneeId: arleidis.id });
+    r = await senior('POST', '/api/clients', { name: 'Cliente Nuevo S.A.S' });
     assert.strictEqual(r.status, 201);
-    const tArleidis = r.body.task;
+    const nuevo = r.body.client;
 
-    r = await junior('POST', '/api/tasks', { title: 'No debería', assigneeId: paula.id });
-    assert.strictEqual(r.status, 403, 'el junior no crea tareas');
-
-    r = await junior('GET', '/api/tasks');
-    assert.strictEqual(r.status, 200);
-    assert.strictEqual(r.body.tasks.length, 1, 'el junior solo ve sus tareas');
-    assert.strictEqual(r.body.tasks[0].id, tPaula.id);
-
-    r = await junior('GET', '/api/tasks?id=' + tArleidis.id);
-    assert.strictEqual(r.status, 404, 'la tarea de otra persona no existe para el junior');
-
-    r = await senior('GET', '/api/tasks');
-    assert.strictEqual(r.body.tasks.length, 2, 'el senior ve todas');
-    r = await gerente('GET', '/api/tasks');
-    assert.strictEqual(r.body.tasks.length, 2, 'el gerente ve todas');
-
-    /* ---- el junior avanza su tarea pero no la reasigna ---- */
-    r = await junior('PATCH', '/api/tasks?id=' + tPaula.id, { status: 'en_progreso', hoursSpent: 3, assigneeId: arleidis.id, title: 'Cambiado' });
-    assert.strictEqual(r.status, 200, JSON.stringify(r.body));
-    assert.strictEqual(r.body.task.status, 'en_progreso');
-    assert.strictEqual(r.body.task.hoursSpent, 3);
-    assert.strictEqual(r.body.task.assigneeId, paula.id, 'no cambió la asignación');
-    assert.strictEqual(r.body.task.title, 'Conciliación bancaria', 'no cambió el título');
-
-    r = await junior('PATCH', '/api/tasks?id=' + tArleidis.id, { status: 'terminada' });
-    assert.strictEqual(r.status, 404);
-
-    r = await junior('POST', '/api/tasks?id=' + tPaula.id + '&action=comment', { body: 'Avancé con el extracto de agosto.' });
-    assert.strictEqual(r.status, 201);
-    assert.strictEqual(r.body.comments.length, 1);
-    assert.strictEqual(r.body.comments[0].personName, 'Paula Ariza');
-
-    r = await junior('DELETE', '/api/tasks?id=' + tPaula.id);
-    assert.strictEqual(r.status, 403);
-
-    r = await senior('PATCH', '/api/tasks?id=' + tPaula.id, { status: 'terminada' });
-    assert.strictEqual(r.status, 200);
-    assert.ok(r.body.task.completedAt, 'terminada registra fecha');
-
-    r = await senior('PATCH', '/api/tasks?id=' + tArleidis.id, { assigneeId: paula.id });
-    assert.strictEqual(r.status, 200);
-    r = await junior('GET', '/api/tasks');
-    assert.strictEqual(r.body.tasks.length, 2, 'al reasignar, el junior ya la ve');
-
-    /* ---- presupuesto ---- */
+    /* ---- horas: gerente y senior ven todo; el junior solo lo suyo ---- */
     r = await gerente('GET', '/api/budget');
     assert.strictEqual(r.status, 200);
     assert.strictEqual(r.body.weeks.length, 44);
     assert.strictEqual(r.body.weeks[0].start, '2026-06-01');
     const total = r.body.rows.length;
     assert.ok(total > 200);
+    r = await senior('GET', '/api/budget');
+    assert.strictEqual(r.body.rows.length, total, 'el senior ve todas las filas');
 
     r = await junior('GET', '/api/budget');
     assert.ok(r.body.rows.length > 0 && r.body.rows.length < total);
-    assert.ok(r.body.rows.every(function (x) { return x.personId === paula.id; }), 'el junior solo ve su presupuesto');
+    assert.ok(r.body.rows.every(function (x) { return x.personId === paula.id; }), 'el junior solo ve sus horas');
 
+    /* ---- asignar horas: el senior asigna a una junior, la junior no puede ---- */
     r = await junior('PUT', '/api/budget', { rows: [{ clientId: kaia.id, personId: paula.id, weekIdx: 0, hours: 5 }] });
     assert.strictEqual(r.status, 403);
 
-    r = await senior('PUT', '/api/budget', { rows: [{ clientId: kaia.id, personId: paula.id, weekIdx: 2, hours: 9, phase: 'planeacion' }] });
+    r = await senior('PUT', '/api/budget', { rows: [
+      { clientId: nuevo.id, personId: paula.id, weekIdx: 2, hours: 9, phase: 'planeacion' },
+      { clientId: nuevo.id, personId: arleidis.id, weekIdx: 2, hours: 12, phase: 'planeacion', note: 'Visita en sitio' }
+    ] });
     assert.strictEqual(r.status, 200, JSON.stringify(r.body));
-    r = await junior('GET', '/api/budget');
-    const cell = r.body.rows.find(function (x) { return x.clientId === kaia.id && x.weekIdx === 2; });
-    assert.ok(cell && cell.hours === 9 && cell.phase === 'planeacion');
+    assert.strictEqual(r.body.rows.length, 2);
 
-    r = await senior('PUT', '/api/budget', { rows: [{ clientId: kaia.id, personId: paula.id, weekIdx: 2, hours: null, phase: null }] });
+    r = await junior('GET', '/api/budget');
+    const cell = r.body.rows.find(function (x) { return x.clientId === nuevo.id && x.weekIdx === 2; });
+    assert.ok(cell && cell.hours === 9 && cell.phase === 'planeacion', 'la junior ve las horas que le asignaron');
+    assert.ok(!r.body.rows.some(function (x) { return x.personId === arleidis.id; }), 'pero no las de su compañera');
+
+    r = await senior('PUT', '/api/budget', { rows: [{ clientId: nuevo.id, personId: paula.id, weekIdx: 2, hours: null, phase: null }] });
     assert.strictEqual(r.status, 200);
     assert.strictEqual(r.body.rows[0].deleted, true);
+
+    r = await senior('PUT', '/api/budget', { rows: [{ clientId: nuevo.id, personId: paula.id, weekIdx: 99, hours: 1 }] });
+    assert.strictEqual(r.status, 400, 'semana inexistente');
+    r = await senior('PUT', '/api/budget', { rows: [{ clientId: nuevo.id, personId: paula.id, weekIdx: 1, hours: -1 }] });
+    assert.strictEqual(r.status, 400, 'horas negativas');
 
     r = await gerente('POST', '/api/budget?action=seed');
     assert.strictEqual(r.status, 200);
     r = await senior('POST', '/api/budget?action=seed');
     assert.strictEqual(r.status, 403);
-
-    /* ---- correo: solo gerente/senior consultan; sin credenciales responde claro ---- */
-    r = await junior('GET', '/api/mail');
-    assert.strictEqual(r.status, 403);
-    r = await senior('POST', '/api/mail', { taskId: tPaula.id });
-    assert.ok(r.status === 503 || r.status === 409, 'sin Google configurado: ' + r.status);
 
     /* ---- contraseña propia y cierre de sesión ---- */
     r = await junior('POST', '/api/auth?action=password', { current: 'mala', password: 'otra-clave-123' });
@@ -220,15 +173,14 @@ async function waitForServer() {
 
     r = await junior('POST', '/api/auth?action=logout');
     assert.strictEqual(r.status, 200);
-    r = await junior('GET', '/api/tasks');
+    r = await junior('GET', '/api/budget');
     assert.strictEqual(r.status, 401);
 
     /* ---- desactivar a alguien invalida su sesión ---- */
     r = await gerente('PATCH', '/api/people?id=' + roberto.id, { active: false });
     assert.strictEqual(r.status, 200);
-    r = await senior('GET', '/api/tasks');
+    r = await senior('GET', '/api/budget');
     assert.strictEqual(r.status, 401, 'la sesión del desactivado deja de valer');
-    r = await gerente('PATCH', '/api/people?id=' + r.body.id, {});
     r = await gerente('GET', '/api/auth');
     r = await gerente('PATCH', '/api/people?id=' + r.body.user.id, { active: false });
     assert.strictEqual(r.status, 400, 'el gerente no se desactiva a sí mismo');

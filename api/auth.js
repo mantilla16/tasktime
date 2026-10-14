@@ -1,6 +1,6 @@
 /* Sesión de la persona que usa la app.
 
-   GET  /api/auth                    -> { setupRequired, user, mailConfigured }
+   GET  /api/auth                    -> { setupRequired, user }
    POST /api/auth?action=setup       -> crea la primera cuenta de gerente (solo si no existe ninguna)
    POST /api/auth?action=login       -> { email, password }
    POST /api/auth?action=logout
@@ -30,8 +30,7 @@ module.exports = async function handler(req, res) {
       const user = await auth.currentUser(sql, req);
       return res.status(200).json({
         setupRequired: await setupRequired(sql),
-        user: user,
-        mailConfigured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
+        user: user
       });
     }
 

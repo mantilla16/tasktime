@@ -6,6 +6,6 @@ desktop.ini
 .claude/
 node_modules/
 .vercel/
-.pglite/
+.pglite*/
 .env
 .env.*

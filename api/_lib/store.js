@@ -1,5 +1,8 @@
 /* Acceso a Postgres compartido por todas las funciones de /api.
 
+   Entidades: people (equipo y cuentas), clients, weeks (las 44 semanas con su
+   cargabilidad) y budget (horas asignadas por cliente, persona y semana).
+
    En producción (Vercel) se usa Neon a través de DATABASE_URL. Para trabajar en
    el computador sin base remota, dev-server.js activa USE_PGLITE=1 y entonces se
    usa PGlite: un Postgres embebido que guarda los datos en la carpeta .pglite/.
@@ -13,8 +16,6 @@ const fs = require('fs');
 
 const ROLES = ['gerente', 'senior', 'junior'];
 const PHASES = ['previas', 'planeacion', 'ejecucion', 'cierre', 'informe', 'vacaciones', 'compensatorio', 'especiales'];
-const STATUSES = ['pendiente', 'en_progreso', 'en_revision', 'terminada'];
-const PRIORITIES = ['alta', 'media', 'baja'];
 
 const MISSING_DB_MESSAGE =
   'Falta la variable de entorno DATABASE_URL. Conecta la base de Neon en Vercel (Storage) y vuelve a desplegar.';
@@ -125,47 +126,7 @@ async function ensureSchema(sql) {
       note      text,
       unique (client_id, person_id, week_idx)
     )`;
-  await sql`
-    create table if not exists tasks (
-      id           serial primary key,
-      title        text not null,
-      description  text not null default '',
-      client_id    integer references clients(id) on delete set null,
-      phase        text,
-      assignee_id  integer references people(id) on delete set null,
-      created_by   integer references people(id) on delete set null,
-      status       text not null default 'pendiente',
-      priority     text not null default 'media',
-      start_date   date,
-      due_date     date,
-      hours_budget double precision,
-      hours_spent  double precision not null default 0,
-      created_at   timestamptz not null default now(),
-      updated_at   timestamptz not null default now(),
-      completed_at timestamptz,
-      notified_at  timestamptz
-    )`;
-  await sql`
-    create table if not exists task_comments (
-      id         serial primary key,
-      task_id    integer not null references tasks(id) on delete cascade,
-      person_id  integer references people(id) on delete set null,
-      body       text not null,
-      created_at timestamptz not null default now()
-    )`;
 
-  /* Cuenta de Google que envía las notificaciones. Una sola fila (id = 1): el
-     equipo comparte un único remitente. El refresh_token NUNCA sale de aquí
-     hacia el navegador — solo se usa dentro de las funciones de /api. */
-  await sql`
-    create table if not exists mail_sender (
-      id            integer primary key,
-      email         text        not null,
-      name          text,
-      refresh_token text        not null,
-      connected_at  timestamptz not null default now(),
-      last_error    text
-    )`;
 
   schemaReady = true;
 }
@@ -233,39 +194,6 @@ async function seedBudget(sql, data) {
   return created;
 }
 
-/* ---------- remitente de correo (sin cambios de fondo) ---------- */
-
-async function readSender(sql) {
-  const rows = await sql`
-    select email, name, refresh_token, connected_at, last_error
-      from mail_sender where id = 1`;
-  return rows[0] || null;
-}
-
-async function saveSender(sql, { email, name, refreshToken }) {
-  await sql`
-    insert into mail_sender (id, email, name, refresh_token, connected_at, last_error)
-    values (1, ${email}, ${name || null}, ${refreshToken}, now(), null)
-    on conflict (id) do update
-       set email = excluded.email,
-           name = excluded.name,
-           refresh_token = excluded.refresh_token,
-           connected_at = now(),
-           last_error = null`;
-}
-
-async function setSenderError(sql, message) {
-  await sql`update mail_sender set last_error = ${message} where id = 1`;
-}
-
-async function clearSenderError(sql) {
-  await sql`update mail_sender set last_error = null where id = 1`;
-}
-
-async function deleteSender(sql) {
-  await sql`delete from mail_sender where id = 1`;
-}
-
 /* ---------- utilidades comunes a los handlers ---------- */
 
 function readBody(req) {
@@ -310,19 +238,12 @@ function fail(res, status, error, extra) {
 module.exports = {
   ROLES,
   PHASES,
-  STATUSES,
-  PRIORITIES,
   MISSING_DB_MESSAGE,
   connectionString,
   getSql,
   ensureSchema,
   loadBudgetFile,
   seedBudget,
-  readSender,
-  saveSender,
-  setSenderError,
-  clearSenderError,
-  deleteSender,
   readBody,
   queryOf,
   str,
