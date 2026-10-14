@@ -58,6 +58,14 @@ function isSecure(req) {
   return !(host.startsWith('localhost') || host.startsWith('127.0.0.1'));
 }
 
+/* Si un proxy sirve la app bajo una ruta (X-Forwarded-Prefix: /tasktime), la
+   cookie se limita a esa ruta para no compartirla con otras apps del host. */
+function cookiePath(req) {
+  const prefix = String(req.headers['x-forwarded-prefix'] || '').trim();
+  if (!prefix || !/^\/[\w./-]*$/.test(prefix)) return '/';
+  return prefix.replace(/\/+$/, '') + '/';
+}
+
 function appendCookie(res, value) {
   const prev = res.getHeader('Set-Cookie');
   const list = !prev ? [] : Array.isArray(prev) ? prev.slice() : [prev];
@@ -68,13 +76,13 @@ function appendCookie(res, value) {
 function setSessionCookie(req, res, token) {
   appendCookie(res,
     COOKIE + '=' + encodeURIComponent(token) +
-    '; Path=/; Max-Age=' + (SESSION_DAYS * 86400) +
+    '; Path=' + cookiePath(req) + '; Max-Age=' + (SESSION_DAYS * 86400) +
     '; HttpOnly; SameSite=Lax' + (isSecure(req) ? '; Secure' : ''));
 }
 
 function clearSessionCookie(req, res) {
   appendCookie(res,
-    COOKIE + '=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax' + (isSecure(req) ? '; Secure' : ''));
+    COOKIE + '=; Path=' + cookiePath(req) + '; Max-Age=0; HttpOnly; SameSite=Lax' + (isSecure(req) ? '; Secure' : ''));
 }
 
 /* ---- sesiones ---- */

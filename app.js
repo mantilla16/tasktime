@@ -162,8 +162,13 @@ function toast(msg, kind) {
 
 /* ============================ API ============================ */
 
+/* La app puede vivir en la raíz (https://host/) o bajo una ruta
+   (https://host/tasktime/): las llamadas al API se hacen relativas a la
+   carpeta de la página, nunca a la raíz del dominio. */
+const BASE = location.pathname.replace(/\/[^/]*$/, '');
+
 async function api(method, url, body) {
-  const r = await fetch(url, {
+  const r = await fetch(BASE + url, {
     method: method,
     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body)
