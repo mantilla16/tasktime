@@ -758,7 +758,7 @@ function renderPresupuesto(mine) {
       const persona = mine ? '' : '<td class="fijo2"><span class="persona"><span class="avatar sm ' + (r.person.role === 'junior' ? 'gris' : '') + '">' + esc(initials(r.person.name)) + '</span> ' + esc(r.person.name) + ' <span class="sec">' + ROLE_LABELS[r.person.role] + '</span></span></td>';
       return out + '<tr>' + cliente + persona + cells + '<td class="total num">' + fmtH(total) + '</td></tr>';
     }).join('');
-    grid = '<div class="cuadricula"><table class="wgrid dias" style="--fijo-w:' + (mine ? '0px' : '210px') + '">' + cabeceraDias(mine ? ['Cliente'] : ['Cliente', 'Funcionario'], 'Total', personas) + '<tbody>' + body + '</tbody></table></div>';
+    grid = '<div class="cuadricula"><table class="wgrid dias" style="--fijo-w:' + (mine ? '230px' : '210px') + '">' + cabeceraDias(mine ? ['Cliente'] : ['Cliente', 'Funcionario'], 'Total', personas) + '<tbody>' + body + '</tbody></table></div>';
   }
   const sub = (mine ? 'Tus horas por cliente y día. ' : 'Horas por cliente, funcionario y día, agrupadas por sede. ') + esc(rangoCalendario()) + '.' +
     (editable ? ' Haz clic en un día para repartir la semana' + (isGerente() ? ' o en el encabezado de una semana para ajustar su cargabilidad.' : '.') : '');
@@ -807,9 +807,9 @@ function renderMapaCarga(people) {
       if (vac && !h) cls = 'ph-vacaciones';
       return '<td class="celda ' + cls + (w.idx === cur ? ' actual' : '') + '" title="' + esc(p.name) + ' · ' + esc(weekTitle(w)) + ': ' + fmtH(h) + ' de ' + fmtH(w.capacity) + ' h"><span>' + (h ? fmtH(h) : (vac ? 'Vac.' : '')) + '</span></td>';
     }).join('');
-    return '<tr><td class="fijo2" style="left:0"><span class="persona"><span class="avatar sm ' + (p.role === 'junior' ? 'gris' : '') + '">' + esc(initials(p.name)) + '</span> ' + esc(p.name) + ' <span class="sec">' + ROLE_LABELS[p.role] + '</span></span></td>' + cells + '<td class="total num">' + fmtH(total) + '</td></tr>';
+    return '<tr><td class="fijo"><span class="persona"><span class="avatar sm ' + (p.role === 'junior' ? 'gris' : '') + '">' + esc(initials(p.name)) + '</span> ' + esc(p.name) + ' <span class="sec">' + ROLE_LABELS[p.role] + '</span></span></td>' + cells + '<td class="total num">' + fmtH(total) + '</td></tr>';
   }).join('');
-  return '<div class="cuadricula"><table class="wgrid" style="--fijo-w:0px">' + cabeceraSemanas(['Persona'], 'Total') + '<tbody>' + rows + '</tbody></table></div>';
+  return '<div class="cuadricula"><table class="wgrid" style="--fijo-w:230px">' + cabeceraSemanas(['Persona'], 'Total') + '<tbody>' + rows + '</tbody></table></div>';
 }
 
 /* ============================ Clientes ============================ */

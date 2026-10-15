@@ -150,8 +150,17 @@
   .wgrid th.fijo, .wgrid td.fijo{ position:sticky; left:0; z-index:2; text-align:left; padding:6px 12px; background:var(--rb-superficie); }
   .wgrid th.fijo2, .wgrid td.fijo2{ position:sticky; left:var(--fijo-w,210px); z-index:2; text-align:left; padding:6px 12px; background:var(--rb-superficie); border-right:2px solid var(--rb-borde); }
   .wgrid thead th.fijo, .wgrid thead th.fijo2{ z-index:4; background:var(--rb-azul); }
-  .wgrid td.fijo{ font-weight:700; color:var(--rb-texto); max-width:210px; overflow:hidden; text-overflow:ellipsis; }
-  .wgrid td.fijo2{ color:var(--rb-texto); }
+  /* Las dos columnas fijas tienen ancho exacto: la segunda se pega en left = ancho de la primera,
+     así nunca queda un hueco por el que se vean las celdas desplazadas. */
+  .wgrid th.fijo, .wgrid td.fijo{ width:var(--fijo-w,210px); min-width:var(--fijo-w,210px); max-width:var(--fijo-w,210px); }
+  .wgrid td.fijo{ font-weight:700; color:var(--rb-texto); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .wgrid td.fijo .persona{ display:flex; align-items:center; gap:6px; font-weight:400; }
+  .wgrid th.fijo2, .wgrid td.fijo2{ width:230px; min-width:230px; max-width:230px; }
+  .wgrid td.fijo2{ color:var(--rb-texto); overflow:hidden; }
+  .wgrid td.fijo2 .persona{ display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .wgrid td.fijo2 .persona .sec{ flex:none; }
+  .wgrid table, table.wgrid{ table-layout:auto; }
+  .wgrid tr.grupo td{ left:0; }
   .wgrid td.celda{ width:54px; min-width:54px; height:32px; text-align:center; font-weight:700; color:var(--rb-texto); }
   .wgrid td.celda span{ display:block; padding:7px 4px; }
   .wgrid td.celda.editable{ cursor:pointer; }
