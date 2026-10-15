@@ -1,7 +1,9 @@
 /* Acceso a Postgres compartido por todas las funciones de /api.
 
-   Entidades: people (equipo y cuentas), clients, weeks (las 44 semanas con su
-   cargabilidad) y budget (horas asignadas por cliente, persona y semana).
+   Entidades: people (equipo y cuentas), clients (con su sede), weeks (semanas
+   con su cargabilidad) y budget_days (horas asignadas por cliente, persona y
+   DÍA). La tabla budget (por semana) se conserva solo como origen de la
+   migración a días; nada la lee después.
 
    Tres motores, una sola interfaz (sql`select ... ${valor}` devuelve filas):
    - Postgres propio (servidor Ubuntu, Docker): DATABASE_URL=postgres://... con el
@@ -16,7 +18,11 @@
 const path = require('path');
 const fs = require('fs');
 
+const calendario = require('./calendario.js');
+
 const ROLES = ['gerente', 'senior', 'junior'];
+const SEDES = ['Barranquilla', 'Santa Marta'];
+const CAPACIDAD_SEMANAL = 42;
 const PHASES = ['previas', 'planeacion', 'ejecucion', 'cierre', 'informe', 'vacaciones', 'compensatorio', 'especiales'];
 
 const MISSING_DB_MESSAGE =
@@ -141,6 +147,7 @@ async function ensureSchema(sql) {
       name   text not null unique,
       active boolean not null default true
     )`;
+  await sql`alter table clients add column if not exists sede text`;
   await sql`
     create table if not exists weeks (
       idx        integer primary key,
@@ -160,9 +167,96 @@ async function ensureSchema(sql) {
       note      text,
       unique (client_id, person_id, week_idx)
     )`;
+  await sql`
+    create table if not exists budget_days (
+      id        serial primary key,
+      client_id integer not null references clients(id) on delete cascade,
+      person_id integer not null references people(id) on delete cascade,
+      day       date not null,
+      hours     double precision,
+      phase     text,
+      note      text,
+      unique (client_id, person_id, day)
+    )`;
+  await sql`create index if not exists ix_budget_days_person_day on budget_days (person_id, day)`;
+  await sql`
+    create table if not exists meta (
+      key   text primary key,
+      value text
+    )`;
 
-
+  await migrateWeeklyToDays(sql);
   schemaReady = true;
+}
+
+/* ---------- semanas y días ---------- */
+
+function isoDate(d) {
+  return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
+}
+function parseDate(s) {
+  const p = String(s).slice(0, 10).split('-').map(Number);
+  return new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+}
+function addDays(iso, n) {
+  const d = parseDate(iso);
+  d.setUTCDate(d.getUTCDate() + n);
+  return isoDate(d);
+}
+
+/* Días hábiles (lunes a viernes, sin festivos) de la semana que empieza en `weekStart`. */
+function workingDays(weekStart) {
+  const out = [];
+  for (let i = 0; i < 5; i++) {
+    const iso = addDays(weekStart, i);
+    if (!calendario.esFestivo(parseDate(iso))) out.push(iso);
+  }
+  if (!out.length) for (let i = 0; i < 5; i++) out.push(addDays(weekStart, i));
+  return out;
+}
+
+/* Reparte `total` horas entre `n` días en partes iguales (dos decimales);
+   el último día absorbe el redondeo para que la suma sea exacta. */
+function splitHours(total, n) {
+  if (!n) return [];
+  const each = Math.round((total / n) * 100) / 100;
+  const out = [];
+  let acc = 0;
+  for (let i = 0; i < n - 1; i++) { out.push(each); acc += each; }
+  out.push(Math.round((total - acc) * 100) / 100);
+  return out;
+}
+
+/* Una celda semanal (cliente, persona, semana) convertida en celdas por día. */
+function weekCellToDays(weekStart, hours, phase, note) {
+  const days = workingDays(weekStart);
+  if (hours == null) {
+    // Semana marcada sin horas (p. ej. vacaciones): se marcan los días hábiles.
+    return phase || note ? days.map(function (d) { return { day: d, hours: null, phase: phase || null, note: note || null }; }) : [];
+  }
+  const parts = splitHours(Number(hours), days.length);
+  return days.map(function (d, i) { return { day: d, hours: parts[i], phase: phase || null, note: note || null }; });
+}
+
+/* Migración única: las celdas por semana que ya existían se convierten en
+   días hábiles de esa semana con las horas repartidas. Después, todas las
+   semanas quedan con la cargabilidad de 42 h. */
+async function migrateWeeklyToDays(sql) {
+  const done = await sql`select value from meta where key = 'budget_days_migrated'`;
+  if (done.length) return;
+  const rows = await sql`
+    select b.client_id, b.person_id, b.hours, b.phase, b.note, to_char(w.week_start, 'YYYY-MM-DD') as week_start
+      from budget b join weeks w on w.idx = b.week_idx`;
+  for (const r of rows) {
+    for (const d of weekCellToDays(r.week_start, r.hours, r.phase, r.note)) {
+      await sql`
+        insert into budget_days (client_id, person_id, day, hours, phase, note)
+        values (${r.client_id}, ${r.person_id}, ${d.day}, ${d.hours}, ${d.phase}, ${d.note})
+        on conflict (client_id, person_id, day) do nothing`;
+    }
+  }
+  await sql`update weeks set capacity = ${CAPACIDAD_SEMANAL}`;
+  await sql`insert into meta (key, value) values ('budget_days_migrated', ${new Date().toISOString()}) on conflict (key) do nothing`;
 }
 
 /* ---------- datos base: el presupuesto de horas del Excel ---------- */
@@ -183,10 +277,9 @@ async function seedBudget(sql, data) {
   for (const w of data.weeks) {
     await sql`
       insert into weeks (idx, week_start, label, month, capacity)
-      values (${w.index}, ${w.start}, ${w.label}, ${w.month}, ${Number(w.capacity) || 0})
+      values (${w.index}, ${w.start}, ${w.label}, ${w.month}, ${CAPACIDAD_SEMANAL})
       on conflict (idx) do update
-        set week_start = excluded.week_start, label = excluded.label,
-            month = excluded.month, capacity = excluded.capacity`;
+        set week_start = excluded.week_start, label = excluded.label, month = excluded.month`;
     created.weeks++;
   }
 
@@ -214,17 +307,24 @@ async function seedBudget(sql, data) {
     }
   }
 
+  const weekStart = {};
+  data.weeks.forEach(function (w) { weekStart[w.index] = w.start; });
   for (const b of data.budget) {
     const cid = clientIds[b.client];
     const pid = personIds[b.person];
-    if (!cid || !pid) continue;
-    await sql`
-      insert into budget (client_id, person_id, week_idx, hours, phase)
-      values (${cid}, ${pid}, ${b.week}, ${b.hours == null ? null : Number(b.hours)}, ${b.phase || null})
-      on conflict (client_id, person_id, week_idx) do update
-        set hours = excluded.hours, phase = excluded.phase`;
+    const ws = weekStart[b.week];
+    if (!cid || !pid || !ws) continue;
+    for (const d of weekCellToDays(ws, b.hours == null ? null : Number(b.hours), b.phase || null, null)) {
+      await sql`
+        insert into budget_days (client_id, person_id, day, hours, phase, note)
+        values (${cid}, ${pid}, ${d.day}, ${d.hours}, ${d.phase}, ${d.note})
+        on conflict (client_id, person_id, day) do update
+          set hours = excluded.hours, phase = excluded.phase`;
+    }
     created.budget++;
   }
+  // El archivo ya fue aplicado: la migración desde la tabla semanal no debe repetirlo.
+  await sql`insert into meta (key, value) values ('budget_days_migrated', ${new Date().toISOString()}) on conflict (key) do nothing`;
   return created;
 }
 
@@ -271,7 +371,14 @@ function fail(res, status, error, extra) {
 
 module.exports = {
   ROLES,
+  SEDES,
+  CAPACIDAD_SEMANAL,
   PHASES,
+  isoDate,
+  parseDate,
+  addDays,
+  workingDays,
+  splitHours,
   MISSING_DB_MESSAGE,
   connectionString,
   getSql,

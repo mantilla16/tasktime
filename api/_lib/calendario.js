@@ -3,12 +3,11 @@
    Las semanas empiezan en lunes. La etiqueta sigue el estilo del Excel
    ("Del 13 al 16"): del primer día hábil de la semana al sábado. El mes es el
    que contiene la mayoría de los días hábiles (el del miércoles). La
-   cargabilidad por defecto son 44 h menos 8 h por cada festivo entre lunes y
-   viernes; el gerente puede ajustarla después semana a semana. */
+   cargabilidad es fija: 42 h por semana (el gerente puede ajustarla). Los
+   festivos se usan para marcar los días en el tablero. */
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-const HORAS_SEMANA = 44;
-const HORAS_DIA = 8;
+const HORAS_SEMANA = 42;   // cargabilidad fija por semana
 
 function iso(d) {
   return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
@@ -81,7 +80,7 @@ function semanaDesde(monday) {
     start: iso(monday),
     label: 'Del ' + primerHabil.getUTCDate() + ' al ' + sabado.getUTCDate(),
     month: MESES[dias[2].getUTCMonth()],
-    capacity: Math.max(0, HORAS_SEMANA - HORAS_DIA * festivos)
+    capacity: HORAS_SEMANA
   };
 }
 

@@ -235,6 +235,62 @@
   .vacio h3{ color:var(--rb-texto); margin-bottom:6px; }
   .rb-pie{ max-width:var(--ancho-app); margin:0 auto; width:100%; }
 
+
+  /* ---------- Tablero por días ---------- */
+  .wgrid.dias td.celda{ width:38px; min-width:38px; font-size:.76rem; }
+  .wgrid.dias td.celda span{ padding:7px 2px; }
+  .wgrid.dias thead th.dia{ font-size:.7rem; font-weight:700; padding:3px 2px; line-height:1.1; }
+  .wgrid.dias thead th.dia small{ display:block; font-weight:400; color:var(--rb-azul-20); font-size:.66rem; }
+  .wgrid.dias thead th.dia.fin{ background:var(--rb-azul-80); color:var(--rb-azul-20); }
+  .wgrid.dias thead th.dia.fest{ background:var(--rb-naranja); color:var(--rb-blanco); }
+  .wgrid.dias thead th.dia.fest small{ color:var(--rb-blanco); }
+  .wgrid.dias thead th.dia.hoy{ box-shadow:inset 0 -3px 0 var(--rb-jade); }
+  .wgrid.dias thead th.sem{ text-align:left; padding:5px 8px; font-size:.78rem; white-space:nowrap; }
+  .wgrid.dias thead th.sem .sec-h{ font-weight:400; color:var(--rb-azul-20); font-size:.7rem; }
+  .wgrid.dias thead th.sem svg{ width:13px; height:13px; vertical-align:-2px; margin-right:4px; color:var(--rb-naranja); }
+  .wgrid.dias thead th.sem.sobre-h{ background:var(--rb-azul-oscuro); color:var(--rb-naranja-60); }
+  .wgrid.dias thead th.sem.sobre-h .sec-h{ color:var(--rb-naranja-40); }
+  .wgrid.dias thead th.sigma{ font-size:.75rem; background:var(--rb-azul-80); }
+  .wgrid td.celda.fin{ background:var(--rb-gris-10); color:var(--rb-gris); }
+  .wgrid td.celda.fest{ background:var(--rb-naranja-10); color:var(--rb-naranja-80); }
+  .wgrid td.celda.fin.ph-previas, .wgrid td.celda.fin.ph-planeacion, .wgrid td.celda.fin.ph-ejecucion, .wgrid td.celda.fin.ph-cierre, .wgrid td.celda.fin.ph-informe, .wgrid td.celda.fin.ph-compensatorio, .wgrid td.celda.fin.ph-especiales, .wgrid td.celda.fin.ph-none,
+  .wgrid td.celda.fest.ph-previas, .wgrid td.celda.fest.ph-planeacion, .wgrid td.celda.fest.ph-ejecucion, .wgrid td.celda.fest.ph-cierre, .wgrid td.celda.fest.ph-informe, .wgrid td.celda.fest.ph-compensatorio, .wgrid td.celda.fest.ph-especiales, .wgrid td.celda.fest.ph-none{ color:var(--rb-texto); outline:2px dashed var(--rb-naranja); outline-offset:-2px; }
+  .wgrid td.celda.hoy{ box-shadow:inset 0 0 0 2px var(--rb-jade); }
+  .wgrid td.sigma{ width:44px; min-width:44px; text-align:center; font-weight:700; background:var(--rb-azul-10); color:var(--rb-texto); border-right:2px solid var(--rb-borde); }
+  .wgrid td.sigma span{ display:block; padding:7px 3px; }
+  .wgrid td.sigma.sobre{ background:var(--rb-naranja); color:var(--rb-blanco); }
+  .wgrid tr.grupo td{ position:sticky; left:0; background:var(--rb-jade-10); color:var(--rb-texto); font-weight:700; font-size:.8rem; letter-spacing:.02em; padding:6px 12px; border-bottom:1px solid var(--rb-jade-40); z-index:1; }
+  .lg-fin{ background:var(--rb-gris-20); } .lg-fest{ background:var(--rb-naranja-20); outline:2px dashed var(--rb-naranja); outline-offset:-2px; }
+
+  /* Días en miniatura dentro de la tarjeta semanal */
+  .linea{ grid-template-columns:minmax(0,1fr) auto auto; row-gap:6px; }
+  .linea .cli{ white-space:normal; }
+  .dias-mini{ display:flex; gap:3px; grid-column:1 / -1; }
+  .dias-mini .dm{ width:26px; height:30px; border-radius:6px; background:var(--rb-gris-10); display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1; color:var(--rb-gris); }
+  .dias-mini .dm i{ font-style:normal; font-size:.6rem; font-weight:700; }
+  .dias-mini .dm b{ font-size:.7rem; font-weight:700; min-height:.7rem; }
+  .dias-mini .dm.fin{ background:var(--rb-gris-20); }
+  .dias-mini .dm.fest{ background:var(--rb-naranja-10); color:var(--rb-naranja-80); }
+  .dias-mini .dm.con{ color:var(--rb-texto); }
+  .dias-mini .dm.con.ph-none{ background:var(--ph-none); }
+  .dias-mini .dm.hoy{ box-shadow:inset 0 0 0 2px var(--rb-jade); }
+  .persona-card.sobre{ border-color:var(--rb-naranja); }
+  .aviso-sobre{ display:flex; align-items:center; gap:8px; background:var(--rb-naranja-10); color:var(--rb-texto); border-left:4px solid var(--rb-naranja); border-radius:6px; padding:6px 10px; font-size:.82rem; font-weight:700; }
+  .aviso-sobre svg{ width:15px; height:15px; color:var(--rb-naranja); flex:none; }
+  .sede{ display:inline-block; padding:2px 10px; border-radius:var(--rb-radio-pildora); font-size:.75rem; font-weight:700; color:var(--rb-texto); }
+  .sede.a{ background:var(--rb-turquesa-20); } .sede.b{ background:var(--rb-jade-20); }
+
+  /* Editor de días (modal) */
+  .dias-ed{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+  .dia-ed{ display:flex; flex-direction:column; gap:4px; border:1px solid var(--rb-gris-40); border-radius:8px; padding:6px; background:var(--rb-blanco); }
+  .dia-ed .n{ font-size:.72rem; font-weight:700; color:var(--rb-texto); text-align:center; line-height:1.2; }
+  .dia-ed .n small{ font-weight:400; color:var(--rb-texto-2); }
+  .dia-ed .n em{ display:block; font-style:normal; font-size:.6rem; color:var(--rb-naranja); }
+  .dia-ed.fin{ background:var(--rb-gris-10); }
+  .dia-ed.fest{ background:var(--rb-naranja-10); border-color:var(--rb-naranja-40); }
+  .dia-ed .rb-input{ padding:6px 4px; text-align:center; font-size:.9rem; }
+  @media (max-width:640px){ .dias-ed{ grid-template-columns:repeat(4,1fr); } }
+
   @media (max-width: 880px){
     .rb-header{ flex-wrap:wrap; }
     .rb-logo{ width:140px; height:47px; margin-right:8px; }

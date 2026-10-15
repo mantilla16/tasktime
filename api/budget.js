@@ -1,7 +1,7 @@
-/* Presupuesto de horas por semana (la hoja de Excel, en la base de datos).
+/* Horas asignadas por cliente, persona y DÍA (la hoja de Excel, en la base).
 
-   GET  /api/budget                -> { weeks, rows }  junior: solo sus filas
-   PUT  /api/budget                -> gerente/senior: { rows:[{ clientId, personId, weekIdx, hours, phase, note }] }
+   GET  /api/budget                -> { weeks, holidays, capacity, rows }  junior: solo sus filas
+   PUT  /api/budget                -> gerente/senior: { rows:[{ clientId, personId, day, hours, phase, note }] }
                                       una celda sin horas, fase ni nota se elimina
    POST /api/budget?action=seed    -> gerente: recarga data/presupuesto-2026.json (no borra lo demás)
    POST /api/budget?action=weeks   -> gerente: { until: 'YYYY-MM-DD' } amplía el calendario hasta esa fecha
@@ -10,6 +10,17 @@
 const store = require('./_lib/store.js');
 const auth = require('./_lib/auth.js');
 const calendario = require('./_lib/calendario.js');
+
+function rowOut(r) {
+  return {
+    clientId: r.client_id,
+    personId: r.person_id,
+    day: r.day,
+    hours: r.hours == null ? null : Number(r.hours),
+    phase: r.phase || null,
+    note: r.note || null
+  };
+}
 
 function weekOut(w) {
   return { idx: w.idx, start: w.start, label: w.label, month: w.month, capacity: Number(w.capacity) || 0 };
@@ -22,15 +33,18 @@ async function readWeeks(sql) {
   return rows.map(weekOut);
 }
 
-function rowOut(r) {
-  return {
-    clientId: r.client_id,
-    personId: r.person_id,
-    weekIdx: r.week_idx,
-    hours: r.hours == null ? null : Number(r.hours),
-    phase: r.phase || null,
-    note: r.note || null
-  };
+/* Festivos de Colombia dentro del rango del calendario. */
+function holidaysFor(weeks) {
+  if (!weeks.length) return [];
+  const y0 = Number(weeks[0].start.slice(0, 4));
+  const y1 = Number(weeks[weeks.length - 1].start.slice(0, 4)) + 1;
+  const first = weeks[0].start;
+  const last = store.addDays(weeks[weeks.length - 1].start, 6);
+  const out = [];
+  for (let y = y0; y <= y1; y++) {
+    Object.keys(calendario.festivosColombia(y)).forEach(function (d) { if (d >= first && d <= last) out.push(d); });
+  }
+  return out.sort();
 }
 
 module.exports = async function handler(req, res) {
@@ -46,10 +60,16 @@ module.exports = async function handler(req, res) {
     const action = store.str(store.queryOf(req).action);
 
     if (req.method === 'GET') {
+      const weeks = await readWeeks(sql);
       const rows = auth.canManage(user)
-        ? await sql`select * from budget`
-        : await sql`select * from budget where person_id = ${user.id}`;
-      return res.status(200).json({ weeks: await readWeeks(sql), rows: rows.map(rowOut) });
+        ? await sql`select client_id, person_id, to_char(day, 'YYYY-MM-DD') as day, hours, phase, note from budget_days`
+        : await sql`select client_id, person_id, to_char(day, 'YYYY-MM-DD') as day, hours, phase, note from budget_days where person_id = ${user.id}`;
+      return res.status(200).json({
+        weeks: weeks,
+        holidays: holidaysFor(weeks),
+        capacity: store.CAPACIDAD_SEMANAL,
+        rows: rows.map(rowOut)
+      });
     }
 
     /* ---- ampliar el calendario ---- */
@@ -74,7 +94,8 @@ module.exports = async function handler(req, res) {
           on conflict (idx) do nothing`;
         idx++;
       }
-      return res.status(201).json({ added: nuevas.length, weeks: await readWeeks(sql) });
+      const weeks = await readWeeks(sql);
+      return res.status(201).json({ added: nuevas.length, weeks: weeks, holidays: holidaysFor(weeks) });
     }
 
     /* ---- ajustar una semana ---- */
@@ -102,38 +123,40 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
-      if (!auth.canManage(user)) return store.fail(res, 403, 'Solo gerentes y seniors editan el presupuesto.');
+      if (!auth.canManage(user)) return store.fail(res, 403, 'Solo gerentes y seniors asignan horas.');
       const body = store.readBody(req) || {};
       const list = Array.isArray(body.rows) ? body.rows : null;
       if (!list || !list.length) return store.fail(res, 400, 'Se esperaba { rows: [...] }.');
       if (list.length > 500) return store.fail(res, 400, 'Demasiadas celdas en una sola petición.');
 
+      const weeks = await readWeeks(sql);
+      const first = weeks.length ? weeks[0].start : null;
+      const last = weeks.length ? store.addDays(weeks[weeks.length - 1].start, 6) : null;
+
       const saved = [];
       for (const r of list) {
         const clientId = store.numOrNull(r.clientId);
         const personId = store.numOrNull(r.personId);
-        const weekIdx = store.numOrNull(r.weekIdx);
+        const day = store.dateOrNull(r.day);
         const hours = store.numOrNull(r.hours);
         const phase = store.str(r.phase) || null;
         const note = store.str(r.note, 300) || null;
-        if (!clientId || !personId || weekIdx === null) return store.fail(res, 400, 'Celda incompleta.');
+        if (!clientId || !personId || !day) return store.fail(res, 400, 'Celda incompleta.');
+        if (!first || day < first || day > last) return store.fail(res, 400, 'El día ' + day + ' está fuera del calendario. Amplíalo en Ajustes.');
         if (phase && store.PHASES.indexOf(phase) === -1) return store.fail(res, 400, 'Fase inválida.');
-        if (hours !== null && hours < 0) return store.fail(res, 400, 'Horas inválidas.');
+        if (hours !== null && (hours < 0 || hours > 24)) return store.fail(res, 400, 'Horas inválidas (0 a 24 por día).');
 
         if (hours === null && !phase && !note) {
-          await sql`
-            delete from budget where client_id = ${clientId} and person_id = ${personId} and week_idx = ${weekIdx}`;
-          saved.push({ clientId: clientId, personId: personId, weekIdx: weekIdx, deleted: true });
+          await sql`delete from budget_days where client_id = ${clientId} and person_id = ${personId} and day = ${day}`;
+          saved.push({ clientId: clientId, personId: personId, day: day, deleted: true });
           continue;
         }
-        const w = await sql`select idx from weeks where idx = ${weekIdx}`;
-        if (!w.length) return store.fail(res, 400, 'La semana no existe.');
         const rows = await sql`
-          insert into budget (client_id, person_id, week_idx, hours, phase, note)
-          values (${clientId}, ${personId}, ${weekIdx}, ${hours}, ${phase}, ${note})
-          on conflict (client_id, person_id, week_idx) do update
+          insert into budget_days (client_id, person_id, day, hours, phase, note)
+          values (${clientId}, ${personId}, ${day}, ${hours}, ${phase}, ${note})
+          on conflict (client_id, person_id, day) do update
             set hours = excluded.hours, phase = excluded.phase, note = excluded.note
-          returning *`;
+          returning client_id, person_id, to_char(day, 'YYYY-MM-DD') as day, hours, phase, note`;
         saved.push(rowOut(rows[0]));
       }
       return res.status(200).json({ rows: saved });

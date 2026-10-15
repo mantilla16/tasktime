@@ -12,11 +12,11 @@
    dibujar con render() tras cada cambio.
    ========================================================================= */
 
-const S = { user: null, setupRequired: false, dominio: 'rbcol.co', msClientId: null, msTenantId: null, people: [], clients: [], weeks: [], budget: [], loaded: false };
+const S = { user: null, setupRequired: false, dominio: 'rbcol.co', msClientId: null, msTenantId: null, people: [], clients: [], sedes: ['Barranquilla', 'Santa Marta'], weeks: [], holidays: {}, capacity: 42, budget: [], loaded: false };
 const UI = {
   view: null,
   weekIdx: null,
-  filtro: { persona: 'all', cliente: 'all', mes: 'all' },
+  filtro: { persona: 'all', cliente: 'all', mes: 'all', sede: 'all' },
   filasExtra: [],
   modal: null,
   busy: false,
@@ -44,8 +44,11 @@ const ICON = {
   right: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
   edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4z"/></svg>',
   key: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3M15 8l3 3M18 5l3 3"/></svg>',
-  logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M13 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg>'
+  logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M13 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg>',
+  warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L2.5 17.5A2 2 0 0 0 4.2 20.5h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>'
 };
+const DIAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+const DIAS_LARGO = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 /* ============================ utilidades ============================ */
 
@@ -125,15 +128,56 @@ function rangoCalendario() {
   return S.weeks.length + ' semanas, del ' + fmtDate(a.start) + ' al ' + fmtDate(addDays(b.start, 5));
 }
 function weekTitle(w) { return w ? w.month + ', ' + w.label.toLowerCase() : ''; }
-function budgetMap() {
-  const m = {};
-  S.budget.forEach(function (r) { m[r.clientId + '|' + r.personId + '|' + r.weekIdx] = r; });
-  return m;
+function weekTag(w) { return w ? 'Sem ' + isoWeekNumber(w.start) : ''; }
+
+/* ---- días ---- */
+function dow(iso) { return (new Date(iso + 'T00:00:00').getDay() + 6) % 7; }   // 0 = lunes … 6 = domingo
+function mondayOf(iso) { return addDays(iso, -dow(iso)); }
+function isWeekend(iso) { return dow(iso) >= 5; }
+function isHoliday(iso) { return Boolean(S.holidays[iso]); }
+function isoWeekNumber(iso) {
+  const p = iso.split('-').map(Number);
+  const d = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+  const dayNum = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - dayNum + 3);
+  const firstThu = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+  return 1 + Math.round(((d - firstThu) / 86400000 - 3 + ((firstThu.getUTCDay() + 6) % 7)) / 7);
 }
+function weekDays(w) { const out = []; for (let i = 0; i < 7; i++) out.push(addDays(w.start, i)); return out; }
+function diaClases(iso) {
+  return (isWeekend(iso) ? ' fin' : '') + (isHoliday(iso) ? ' fest' : '') + (iso === todayISO() ? ' hoy' : '');
+}
+function diaTitulo(iso) {
+  return DIAS_LARGO[dow(iso)] + ' ' + fmtDate(iso) + (isHoliday(iso) ? ' · festivo' : '');
+}
+
+/* ---- índices del presupuesto (se recalculan al cargar y al guardar) ---- */
+let IDX = { byKey: {}, byWeek: {}, weekOfMonday: {} };
+function indexBudget() {
+  IDX = { byKey: {}, byWeek: {}, weekOfMonday: {} };
+  S.weeks.forEach(function (w) { IDX.weekOfMonday[w.start] = w.idx; });
+  S.budget.forEach(function (r) {
+    IDX.byKey[r.clientId + '|' + r.personId + '|' + r.day] = r;
+    const wi = IDX.weekOfMonday[mondayOf(r.day)];
+    if (wi === undefined) return;
+    (IDX.byWeek[wi] = IDX.byWeek[wi] || []).push(r);
+  });
+}
+function weekOfDay(iso) { const wi = IDX.weekOfMonday[mondayOf(iso)]; return wi === undefined ? null : wi; }
+function rowsWeek(weekIdx) { return IDX.byWeek[weekIdx] || []; }
+function cellOf(clientId, personId, day) { return IDX.byKey[clientId + '|' + personId + '|' + day] || null; }
 function hoursOf(personId, weekIdx) {
-  return S.budget.filter(function (r) { return r.personId === personId && r.weekIdx === weekIdx; })
-    .reduce(function (a, r) { return a + (r.hours || 0); }, 0);
+  return rowsWeek(weekIdx).reduce(function (a, r) { return a + (r.personId === personId ? (r.hours || 0) : 0); }, 0);
 }
+function weekCells(clientId, personId, w) {
+  return weekDays(w).map(function (d) { return cellOf(clientId, personId, d); });
+}
+function sobrecargados(weekIdx, people) {
+  const w = weekByIdx(weekIdx);
+  if (!w) return [];
+  return people.filter(function (p) { return hoursOf(p.id, weekIdx) > w.capacity; });
+}
+function sedeLabel(sede) { return sede || 'Sin sede'; }
 function cargaClass(hours, capacity) {
   if (!hours) return 'carga-0';
   if (!capacity) return 'carga-2';
@@ -194,12 +238,22 @@ async function loadAll() {
   const results = await Promise.all([api('GET', '/api/people'), api('GET', '/api/clients'), api('GET', '/api/budget')]);
   S.people = results[0].people;
   S.clients = results[1].clients;
+  S.sedes = results[1].sedes || S.sedes;
   S.weeks = results[2].weeks;
+  S.capacity = results[2].capacity || 42;
+  S.holidays = {};
+  (results[2].holidays || []).forEach(function (d) { S.holidays[d] = true; });
   S.budget = results[2].rows;
+  indexBudget();
   S.loaded = true;
+  const cur = currentWeekIdx();
   if (UI.weekIdx === null || !weekByIdx(UI.weekIdx)) {
-    const cur = currentWeekIdx();
     UI.weekIdx = cur >= 0 ? cur : (S.weeks.length ? S.weeks[0].idx : null);
+  }
+  // El tablero por días se abre en el mes actual; "todo el calendario" sigue disponible.
+  if (UI.filtro.mes === 'all' && S.weeks.length) {
+    const w = weekByIdx(cur >= 0 ? cur : S.weeks[0].idx);
+    if (w) UI.filtro.mes = weekMonthKey(w);
   }
 }
 
@@ -481,7 +535,7 @@ function renderView() {
 function selectorSemana() {
   const cur = currentWeekIdx();
   const opts = S.weeks.map(function (w) {
-    return '<option value="' + w.idx + '"' + (w.idx === UI.weekIdx ? ' selected' : '') + '>' + esc(w.month + ' · ' + w.label.toLowerCase()) + (w.idx === cur ? ' (actual)' : '') + '</option>';
+    return '<option value="' + w.idx + '"' + (w.idx === UI.weekIdx ? ' selected' : '') + '>' + esc(weekTag(w) + ' · ' + w.month + ' ' + w.label.toLowerCase()) + (w.idx === cur ? ' (actual)' : '') + '</option>';
   }).join('');
   const first = S.weeks.length ? S.weeks[0].idx : 0, last = S.weeks.length ? S.weeks[S.weeks.length - 1].idx : 0;
   return '<div class="semana-sel">' +
@@ -492,6 +546,16 @@ function selectorSemana() {
     '</div>';
 }
 
+/* Los siete días de una semana para un cliente y una persona, en miniatura. */
+function diasMini(clientId, personId, w) {
+  return '<div class="dias-mini">' + weekDays(w).map(function (d, i) {
+    const c = cellOf(clientId, personId, d);
+    const con = c && (c.hours != null || c.phase);
+    const txt = c && c.hours != null ? fmtH(c.hours) : (c && c.phase === 'vacaciones' ? 'V' : '');
+    return '<span class="dm' + diaClases(d) + (con ? ' con ph-' + (c.phase || 'none') : '') + '" title="' + esc(diaTitulo(d)) + (c && c.hours != null ? ': ' + fmtH(c.hours) + ' h' : '') + '"><i>' + DIAS[i] + '</i><b>' + txt + '</b></span>';
+  }).join('') + '</div>';
+}
+
 function renderSemana(mine) {
   if (!S.weeks.length) {
     return titulo(mine ? 'Mi <b>semana</b>' : 'Asignación <b>semanal</b>') +
@@ -500,59 +564,74 @@ function renderSemana(mine) {
   const w = weekByIdx(UI.weekIdx) || S.weeks[0];
   const editable = !mine && isManager();
   const people = mine ? [S.user].map(function (u) { return personById(u.id) || u; }) : teamPeople();
-  const filas = S.budget.filter(function (r) { return r.weekIdx === w.idx; });
+  const filas = rowsWeek(w.idx);
   const total = filas.reduce(function (a, r) { return a + (r.hours || 0); }, 0);
-  const sobre = people.filter(function (p) { return hoursOf(p.id, w.idx) > w.capacity; }).length;
+  const sobre = sobrecargados(w.idx, people);
   const sinHoras = people.filter(function (p) { return !filas.some(function (r) { return r.personId === p.id; }); }).length;
   const clientesSemana = {};
   filas.forEach(function (r) { clientesSemana[r.clientId] = true; });
+  const dias = weekDays(w);
+  const festivos = dias.filter(isHoliday);
 
   const kpis = mine
     ? '<div class="kpis">' +
       '<div class="rb-kpi ' + (hoursOf(S.user.id, w.idx) > w.capacity ? 'aviso' : 'ok') + '"><div class="valor num">' + fmtH(hoursOf(S.user.id, w.idx)) + ' <small>de ' + fmtH(w.capacity) + ' h</small></div><div class="etiqueta">Horas asignadas esta semana</div></div>' +
-      '<div class="rb-kpi"><div class="valor num">' + filas.filter(function (r) { return r.personId === S.user.id; }).length + '</div><div class="etiqueta">Clientes</div></div>' +
+      '<div class="rb-kpi"><div class="valor num">' + Object.keys(clientesSemana).length + '</div><div class="etiqueta">Clientes</div></div>' +
       '<div class="rb-kpi"><div class="valor num">' + fmtH(w.capacity) + ' <small>h</small></div><div class="etiqueta">Cargabilidad de la semana</div></div>' +
       '</div>'
     : '<div class="kpis">' +
       '<div class="rb-kpi"><div class="valor num">' + fmtH(total) + ' <small>de ' + fmtH(w.capacity * people.length) + ' h</small></div><div class="etiqueta">Horas asignadas al equipo</div></div>' +
       '<div class="rb-kpi"><div class="valor num">' + Object.keys(clientesSemana).length + '</div><div class="etiqueta">Clientes con horas</div></div>' +
-      '<div class="rb-kpi ' + (sobre ? 'aviso' : 'ok') + '"><div class="valor num">' + sobre + '</div><div class="etiqueta">Personas sobre la cargabilidad</div></div>' +
+      '<div class="rb-kpi ' + (sobre.length ? 'aviso' : 'ok') + '"><div class="valor num">' + sobre.length + '</div><div class="etiqueta">Personas sobre las ' + fmtH(w.capacity) + ' h</div></div>' +
       '<div class="rb-kpi ' + (sinHoras ? 'aviso' : '') + '"><div class="valor num">' + sinHoras + '</div><div class="etiqueta">Personas sin horas asignadas</div></div>' +
       '</div>';
 
+  const alerta = sobre.length
+    ? '<div class="rb-alerta rb-alerta--aviso" style="margin-bottom:18px"><b>Sobrecarga en la ' + esc(weekTag(w).toLowerCase()) + ':</b> ' +
+      sobre.map(function (p) { return esc(p.name) + ' (' + fmtH(hoursOf(p.id, w.idx)) + ' h)'; }).join(', ') + ' supera' + (sobre.length === 1 ? '' : 'n') + ' las ' + fmtH(w.capacity) + ' h.</div>'
+    : '';
+
   const cards = people.map(function (p) {
-    const mias = filas.filter(function (r) { return r.personId === p.id; })
-      .sort(function (a, b) { return (b.hours || 0) - (a.hours || 0); });
+    const mias = {};
+    filas.forEach(function (r) { if (r.personId === p.id) mias[r.clientId] = (mias[r.clientId] || 0) + (r.hours || 0); });
+    const clientes = Object.keys(mias).map(Number).sort(function (a, b) { return mias[b] - mias[a]; });
     const h = hoursOf(p.id, w.idx);
-    const vac = mias.some(function (r) { return r.phase === 'vacaciones' && r.hours == null; });
     const pct = w.capacity ? Math.min(100, Math.round(h / w.capacity * 100)) : 0;
-    const lineas = mias.length ? mias.map(function (r) {
-      const c = clientById(r.clientId);
-      return '<div class="linea' + (editable ? ' editable' : '') + '"' + (editable ? ' data-act="celda" data-c="' + r.clientId + '" data-p="' + p.id + '" data-w="' + w.idx + '"' : '') + '>' +
-        '<div class="cli">' + esc(c ? c.name : '') + (r.note ? '<span class="nota">' + esc(r.note) + '</span>' : '') + '</div>' +
-        '<span class="ph ph-' + (r.phase || '') + '">' + esc(r.phase ? phaseLabel(r.phase) : 'Sin fase') + '</span>' +
-        '<span class="hrs num">' + (r.hours != null ? fmtH(r.hours) + ' h' : '—') + '</span></div>';
-    }).join('') : '<div class="linea-vacia">' + (vac ? 'Semana de vacaciones.' : 'Sin horas asignadas esta semana.') + '</div>';
-    return '<div class="rb-tarjeta persona-card">' +
+    const lineas = clientes.length ? clientes.map(function (cid) {
+      const c = clientById(cid);
+      const celdas = weekCells(cid, p.id, w).filter(Boolean);
+      const fases = {}; celdas.forEach(function (x) { if (x.phase) fases[x.phase] = true; });
+      const nota = (celdas.find(function (x) { return x.note; }) || {}).note;
+      const vac = celdas.some(function (x) { return x.phase === 'vacaciones'; }) && !mias[cid];
+      return '<div class="linea' + (editable ? ' editable' : '') + '"' + (editable ? ' data-act="editar-dias" data-c="' + cid + '" data-p="' + p.id + '" data-w="' + w.idx + '"' : '') + '>' +
+        '<div class="cli">' + esc(c ? c.name : '') + (c && c.sede ? ' <span class="sec">· ' + esc(c.sede) + '</span>' : '') + (nota ? '<span class="nota">' + esc(nota) + '</span>' : '') + '</div>' +
+        diasMini(cid, p.id, w) +
+        '<span class="ph ph-' + (Object.keys(fases)[0] || '') + '">' + esc(Object.keys(fases).length ? Object.keys(fases).map(phaseLabel).join(' / ') : 'Sin fase') + '</span>' +
+        '<span class="hrs num">' + (vac ? 'Vac.' : fmtH(mias[cid]) + ' h') + '</span></div>';
+    }).join('') : '<div class="linea-vacia">Sin horas asignadas esta semana.</div>';
+    const sobreP = h > w.capacity;
+    return '<div class="rb-tarjeta persona-card' + (sobreP ? ' sobre' : '') + '">' +
       '<div class="persona-head"><div class="avatar ' + (p.role === 'junior' ? 'gris' : p.role === 'gerente' ? 'azul' : '') + '">' + esc(initials(p.name)) + '</div>' +
-      '<div><div class="nombre">' + esc(p.name) + '</div><div class="meta">' + ROLE_LABELS[p.role] + ' · ' + mias.length + ' cliente' + (mias.length === 1 ? '' : 's') + '</div></div>' +
-      '<div class="total"><div class="h num' + (h > w.capacity ? ' sobre' : '') + '">' + fmtH(h) + ' h</div><div class="c">de ' + fmtH(w.capacity) + '</div></div></div>' +
+      '<div><div class="nombre">' + esc(p.name) + '</div><div class="meta">' + ROLE_LABELS[p.role] + ' · ' + clientes.length + ' cliente' + (clientes.length === 1 ? '' : 's') + '</div></div>' +
+      '<div class="total"><div class="h num' + (sobreP ? ' sobre' : '') + '">' + fmtH(h) + ' h</div><div class="c">de ' + fmtH(w.capacity) + '</div></div></div>' +
       '<div class="barra"><i class="' + barraClass(h, w.capacity) + '" style="width:' + pct + '%"></i></div>' +
+      (sobreP ? '<div class="aviso-sobre">' + ICON.warn + 'Sobrecarga: ' + fmtH(h - w.capacity) + ' h por encima de la cargabilidad.</div>' : '') +
       '<div class="lineas">' + lineas + '</div>' +
       (editable ? '<button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="agregar" data-p="' + p.id + '" data-w="' + w.idx + '">' + ICON.plus + 'Asignar cliente</button>' : '') +
       '</div>';
   }).join('');
 
-  const sub = 'Semana ' + esc(w.label.toLowerCase()) + ' de ' + esc(w.month.toLowerCase()) + ' · cargabilidad ' + fmtH(w.capacity) + ' h por persona' +
-    (editable ? '. Haz clic en una línea para editarla.' : '.');
-  return titulo(mine ? 'Mi <b>semana</b>' : 'Asignación <b>semanal</b>', sub, selectorSemana()) + kpis +
+  const sub = esc(weekTag(w)) + ' · ' + esc(w.label.toLowerCase()) + ' de ' + esc(w.month.toLowerCase()) + ' · cargabilidad ' + fmtH(w.capacity) + ' h por persona' +
+    (festivos.length ? ' · festivo: ' + festivos.map(function (d) { return esc(DIAS_LARGO[dow(d)].toLowerCase() + ' ' + fmtDate(d)); }).join(', ') : '') +
+    (editable ? '. Haz clic en una línea para repartir las horas por día.' : '.');
+  return titulo(mine ? 'Mi <b>semana</b>' : 'Asignación <b>semanal</b>', sub, selectorSemana()) + kpis + alerta +
     '<div class="personas-semana">' + cards + '</div>' + leyendaFases();
 }
 
 function leyendaFases() {
   return '<div class="leyenda">' + PHASE_DEFS.map(function (p) {
     return '<span><i class="ph-' + p.id + '" style="background:var(--ph-' + p.id + ')"></i>' + esc(p.label) + '</span>';
-  }).join('') + '</div>';
+  }).join('') + '<span><i class="lg-fin"></i>Sábado y domingo</span><span><i class="lg-fest"></i>Festivo</span></div>';
 }
 
 /* ============================ Presupuesto anual ============================ */
@@ -582,20 +661,54 @@ function filasPresupuesto(mine) {
   if (!mine) UI.filasExtra.forEach(function (r) { add(r.clientId, r.personId); });
   return rows.map(function (r) { return { clientId: r.clientId, personId: r.personId, client: clientById(r.clientId), person: personById(r.personId) }; })
     .filter(function (r) { return r.client && r.person; })
-    .sort(function (a, b) { return a.client.name.localeCompare(b.client.name) || roleOrder(a.person.role) - roleOrder(b.person.role) || a.person.name.localeCompare(b.person.name); });
+    .sort(function (a, b) {
+      return sedeOrden(a.client.sede) - sedeOrden(b.client.sede) || a.client.name.localeCompare(b.client.name) ||
+        roleOrder(a.person.role) - roleOrder(b.person.role) || a.person.name.localeCompare(b.person.name);
+    });
+}
+function sedeOrden(sede) { const i = S.sedes.indexOf(sede); return i === -1 ? 99 : i; }
+
+/* Cabecera del tablero por días: mes · semana (número ISO + etiqueta) · día. */
+function cabeceraDias(fijas, derecha, personasParaAlerta) {
+  const semanas = visibleWeeks();
+  const editable = isGerente();
+  const meses = [];
+  semanas.forEach(function (w) {
+    const last = meses[meses.length - 1];
+    if (last && last.name === w.month) last.span += 8; else meses.push({ name: w.month, span: 8 });
+  });
+  const r1 = '<tr>' + fijas.map(function (c, i) { return '<th class="' + (i === 0 ? 'fijo' : 'fijo2') + '" rowspan="3" style="vertical-align:bottom">' + c + '</th>'; }).join('') +
+    meses.map(function (m) { return '<th colspan="' + m.span + '">' + esc(m.name) + '</th>'; }).join('') +
+    (derecha ? '<th class="total" rowspan="3" style="vertical-align:bottom">' + derecha + '</th>' : '') + '</tr>';
+  const cur = currentWeekIdx();
+  const r2 = '<tr>' + semanas.map(function (w) {
+    const sobre = sobrecargados(w.idx, personasParaAlerta || []);
+    return '<th colspan="8" class="sem' + (w.idx === cur ? ' actual-h' : '') + (editable ? ' editable-h' : '') + (sobre.length ? ' sobre-h' : '') + '"' +
+      (editable ? ' data-act="editar-semana" data-w="' + w.idx + '"' : '') +
+      ' title="' + esc(weekTag(w) + ' · ' + w.label + ' · cargabilidad ' + fmtH(w.capacity) + ' h') + (sobre.length ? ' · sobrecarga: ' + esc(sobre.map(function (p) { return p.name + ' (' + fmtH(hoursOf(p.id, w.idx)) + ' h)'; }).join(', ')) : '') + (editable ? ' · clic para ajustar' : '') + '">' +
+      (sobre.length ? ICON.warn : '') + esc(weekTag(w)) + ' <span class="sec-h">' + esc(w.label.replace(/^Del\s+/i, '')) + ' · ' + fmtH(w.capacity) + ' h</span></th>';
+  }).join('') + '</tr>';
+  const r3 = '<tr>' + semanas.map(function (w) {
+    return weekDays(w).map(function (d, i) {
+      return '<th class="dia' + diaClases(d) + '" title="' + esc(diaTitulo(d)) + '">' + DIAS[i] + '<small>' + Number(d.slice(8, 10)) + '</small></th>';
+    }).join('') + '<th class="sigma" title="Total de la semana">Σ</th>';
+  }).join('') + '</tr>';
+  return '<thead>' + r1 + r2 + r3 + '</thead>';
 }
 
 function renderPresupuesto(mine) {
-  const cur = currentWeekIdx();
   const editable = !mine && isManager();
   let rows = filasPresupuesto(mine);
   if (!mine) {
     if (UI.filtro.persona !== 'all') rows = rows.filter(function (r) { return String(r.personId) === UI.filtro.persona; });
     if (UI.filtro.cliente !== 'all') rows = rows.filter(function (r) { return String(r.clientId) === UI.filtro.cliente; });
   }
-  const map = budgetMap();
+  if (UI.filtro.sede !== 'all') rows = rows.filter(function (r) { return UI.filtro.sede === 'none' ? !r.client.sede : r.client.sede === UI.filtro.sede; });
   const semanas = visibleWeeks();
-  const filtros = '<div class="filtros">' + selectorMes() + (mine ? '' :
+  const personas = mine ? [personById(S.user.id) || S.user] : teamPeople();
+  const filtros = '<div class="filtros">' + selectorMes() +
+    '<select class="rb-select" data-filtro="sede"><option value="all">Todas las sedes</option>' + S.sedes.map(function (x) { return '<option value="' + esc(x) + '"' + (UI.filtro.sede === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '<option value="none"' + (UI.filtro.sede === 'none' ? ' selected' : '') + '>Sin sede</option></select>' +
+    (mine ? '' :
     '<select class="rb-select" data-filtro="persona"><option value="all">Todas las personas</option>' + activePeople().map(function (p) { return '<option value="' + p.id + '"' + (UI.filtro.persona === String(p.id) ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('') + '</select>' +
     '<select class="rb-select" data-filtro="cliente"><option value="all">Todos los clientes</option>' + S.clients.map(function (c) { return '<option value="' + c.id + '"' + (UI.filtro.cliente === String(c.id) ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</select>' +
     (editable ? '<button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="agregar-fila">' + ICON.plus + 'Agregar fila</button>' : '')) +
@@ -607,32 +720,47 @@ function renderPresupuesto(mine) {
   } else if (!rows.length) {
     grid = '<div class="vacio"><h3>' + (mine ? 'No tienes horas presupuestadas' : 'Sin filas para mostrar') + '</h3><p>' + (mine ? 'Cuando te asignen horas aparecerán aquí.' : 'Cambia los filtros o agrega una fila.') + '</p></div>';
   } else {
-    let lastClient = null;
+    const nCols = 2 + semanas.length * 8;
+    let lastSede = '__', lastClient = null;
     const body = rows.map(function (r) {
+      let out = '';
+      const sede = r.client.sede || null;
+      if (sede !== lastSede) {
+        out += '<tr class="grupo"><td colspan="' + nCols + '">' + esc(sedeLabel(sede)) + '</td></tr>';
+        lastSede = sede; lastClient = null;
+      }
       let total = 0;
       const cells = semanas.map(function (w) {
-        const cell = map[r.clientId + '|' + r.personId + '|' + w.idx];
-        let txt = '', cls = 'celda', title = esc(r.client.name) + ' · ' + esc(r.person.name) + ' · ' + esc(weekTitle(w));
-        if (cell) {
-          if (cell.hours != null) { txt = fmtH(cell.hours); total += cell.hours; }
-          else if (cell.phase === 'vacaciones') txt = 'Vac.';
-          else if (cell.note) txt = '…';
-          cls += ' ph-' + (cell.phase || 'none');
-          title += (cell.hours != null ? ': ' + fmtH(cell.hours) + ' h' : '') + (cell.phase ? ' · ' + esc(phaseLabel(cell.phase)) : '') + (cell.note ? ' · ' + esc(cell.note) : '');
-        }
-        if (w.idx === cur) cls += ' actual';
-        if (editable) cls += ' editable';
-        return '<td class="' + cls + '" title="' + title + '"' + (editable ? ' data-act="celda" data-c="' + r.clientId + '" data-p="' + r.personId + '" data-w="' + w.idx + '"' : '') + '><span>' + txt + '</span></td>';
+        let semTotal = 0;
+        const dias = weekDays(w).map(function (d) {
+          const cell = cellOf(r.clientId, r.personId, d);
+          let txt = '', cls = 'celda' + diaClases(d);
+          let title = esc(r.client.name) + ' · ' + esc(r.person.name) + ' · ' + esc(diaTitulo(d));
+          if (cell) {
+            if (cell.hours != null) { txt = fmtH(cell.hours); semTotal += cell.hours; }
+            else if (cell.phase === 'vacaciones') txt = 'V';
+            else if (cell.note) txt = '…';
+            cls += ' ph-' + (cell.phase || 'none');
+            title += (cell.hours != null ? ': ' + fmtH(cell.hours) + ' h' : '') + (cell.phase ? ' · ' + esc(phaseLabel(cell.phase)) : '') + (cell.note ? ' · ' + esc(cell.note) : '');
+          }
+          if (editable) cls += ' editable';
+          return '<td class="' + cls + '" title="' + title + '"' + (editable ? ' data-act="editar-dias" data-c="' + r.clientId + '" data-p="' + r.personId + '" data-w="' + w.idx + '"' : '') + '><span>' + txt + '</span></td>';
+        }).join('');
+        total += semTotal;
+        const hp = hoursOf(r.personId, w.idx);
+        const sobre = hp > w.capacity;
+        return dias + '<td class="sigma num' + (sobre ? ' sobre' : '') + '" title="' + esc(r.person.name) + ' en la ' + esc(weekTag(w).toLowerCase()) + ': ' + fmtH(hp) + ' de ' + fmtH(w.capacity) + ' h en todos los clientes' + (sobre ? ' · SOBRECARGA' : '') + '"><span>' + (semTotal ? fmtH(semTotal) : '') + '</span></td>';
       }).join('');
       const cliente = '<td class="fijo" title="' + esc(r.client.name) + '">' + (!mine && r.clientId === lastClient ? '' : esc(r.client.name)) + '</td>';
       lastClient = r.clientId;
       const persona = mine ? '' : '<td class="fijo2"><span class="persona"><span class="avatar sm ' + (r.person.role === 'junior' ? 'gris' : '') + '">' + esc(initials(r.person.name)) + '</span> ' + esc(r.person.name) + ' <span class="sec">' + ROLE_LABELS[r.person.role] + '</span></span></td>';
-      return '<tr>' + cliente + persona + cells + '<td class="total num">' + fmtH(total) + '</td></tr>';
+      return out + '<tr>' + cliente + persona + cells + '<td class="total num">' + fmtH(total) + '</td></tr>';
     }).join('');
-    grid = '<div class="cuadricula"><table class="wgrid" style="--fijo-w:' + (mine ? '0px' : '210px') + '">' + cabeceraSemanas(mine ? ['Cliente'] : ['Cliente', 'Funcionario'], 'Total') + '<tbody>' + body + '</tbody></table></div>';
+    grid = '<div class="cuadricula"><table class="wgrid dias" style="--fijo-w:' + (mine ? '0px' : '210px') + '">' + cabeceraDias(mine ? ['Cliente'] : ['Cliente', 'Funcionario'], 'Total', personas) + '<tbody>' + body + '</tbody></table></div>';
   }
-  const sub = (mine ? 'Tus horas por cliente en cada semana. ' : 'Horas por cliente, funcionario y semana. ') + esc(rangoCalendario()) + '.' + (editable ? ' Haz clic en una celda para editarla' + (isGerente() ? ' o en una semana para ajustar su cargabilidad.' : '.') : '');
-  return titulo(mine ? 'Mi <b>presupuesto</b>' : 'Presupuesto <b>anual</b>', sub) + filtros + grid + leyendaFases();
+  const sub = (mine ? 'Tus horas por cliente y día. ' : 'Horas por cliente, funcionario y día, agrupadas por sede. ') + esc(rangoCalendario()) + '.' +
+    (editable ? ' Haz clic en un día para repartir la semana' + (isGerente() ? ' o en el encabezado de una semana para ajustar su cargabilidad.' : '.') : '');
+  return titulo(mine ? 'Mi <b>presupuesto</b>' : 'Presupuesto <b>por días</b>', sub) + filtros + grid + leyendaFases();
 }
 
 /* ============================ Equipo ============================ */
@@ -657,7 +785,7 @@ function renderEquipo() {
   const conPresupuesto = people.filter(function (p) { return p.active !== false && S.budget.some(function (r) { return r.personId === p.id; }); });
   return titulo('Carga del <b>equipo</b>', 'Horas asignadas por semana frente a la cargabilidad. Haz clic en una persona para ver su semana.') +
     '<div class="equipo-grid">' + cards + '</div>' +
-    '<h2 style="margin-bottom:4px">Mapa de carga semanal</h2><p class="sec" style="margin-bottom:12px">Suma de horas por semana. Naranja: por encima de la cargabilidad.</p>' +
+    '<h2 style="margin-bottom:4px">Mapa de carga semanal</h2><p class="sec" style="margin-bottom:12px">Suma de horas por semana. Naranja: por encima de las ' + fmtH(S.capacity) + ' h de cargabilidad.</p>' +
     '<div class="filtros">' + selectorMes() + '</div>' +
     renderMapaCarga(conPresupuesto) +
     '<div class="leyenda"><span><i class="carga-1"></i>Menos del 40 %</span><span><i class="carga-2"></i>40 a 70 %</span><span><i class="carga-3"></i>70 a 90 %</span><span><i class="carga-4"></i>90 a 100 %</span><span><i class="carga-sobre"></i>Sobre la cargabilidad</span><span><i style="background:var(--ph-vacaciones)"></i>Vacaciones</span></div>';
@@ -669,7 +797,7 @@ function renderMapaCarga(people) {
   const rows = people.map(function (p) {
     let total = 0;
     const cells = visibleWeeks().map(function (w) {
-      const mias = S.budget.filter(function (r) { return r.personId === p.id && r.weekIdx === w.idx; });
+      const mias = rowsWeek(w.idx).filter(function (r) { return r.personId === p.id; });
       const h = mias.reduce(function (a, r) { return a + (r.hours || 0); }, 0);
       const vac = mias.some(function (r) { return r.phase === 'vacaciones'; });
       total += h;
@@ -686,23 +814,32 @@ function renderMapaCarga(people) {
 
 function renderClientes() {
   const cur = currentWeekIdx();
-  const rows = S.clients.slice().sort(function (a, b) { return (a.active === false) - (b.active === false) || a.name.localeCompare(b.name); }).map(function (c) {
+  let lista = S.clients.slice().sort(function (a, b) { return (a.active === false) - (b.active === false) || sedeOrden(a.sede) - sedeOrden(b.sede) || a.name.localeCompare(b.name); });
+  if (UI.filtro.sede !== 'all') lista = lista.filter(function (c) { return UI.filtro.sede === 'none' ? !c.sede : c.sede === UI.filtro.sede; });
+  const rows = lista.map(function (c) {
     const team = {};
     let total = 0, semana = 0;
-    S.budget.forEach(function (r) { if (r.clientId === c.id) { team[r.personId] = true; total += r.hours || 0; if (r.weekIdx === cur) semana += r.hours || 0; } });
+    S.budget.forEach(function (r) { if (r.clientId === c.id) { team[r.personId] = true; total += r.hours || 0; } });
+    rowsWeek(cur).forEach(function (r) { if (r.clientId === c.id) semana += r.hours || 0; });
     const names = sortPeople(Object.keys(team).map(function (id) { return personById(Number(id)); }).filter(Boolean));
     return '<tr' + (c.active === false ? ' class="inactivo"' : '') + '>' +
       '<td><b class="az">' + esc(c.name) + '</b>' + (c.active === false ? ' <span class="estado gris">Inactivo</span>' : '') + '</td>' +
+      '<td>' + (c.sede ? '<span class="sede ' + (S.sedes.indexOf(c.sede) === 0 ? 'a' : 'b') + '">' + esc(c.sede) + '</span>' : '<span class="estado aviso">Sin sede</span>') + '</td>' +
       '<td>' + (names.length ? names.map(function (p) { return '<span class="persona"><span class="avatar sm ' + (p.role === 'junior' ? 'gris' : '') + '">' + esc(initials(p.name)) + '</span>' + esc(p.name) + '</span>'; }).join('') : '<span class="sec">Sin equipo asignado</span>') + '</td>' +
       '<td class="num">' + (cur >= 0 ? fmtH(semana) : '—') + '</td><td class="num">' + fmtH(total) + '</td>' +
       '<td style="text-align:right;white-space:nowrap">' +
       '<button class="rb-btn rb-btn--texto rb-btn--sm" data-act="ver-cliente" data-id="' + c.id + '">Ver horas</button>' +
-      (isManager() ? '<button class="icono-btn" data-act="editar-cliente" data-id="' + c.id + '" title="Editar" style="margin-left:6px">' + ICON.edit + '</button>' : '') +
+      (isManager() ? '<button class="icono-btn" data-act="editar-cliente" data-id="' + c.id + '" title="Editar nombre y sede" style="margin-left:6px">' + ICON.edit + '</button>' : '') +
       '</td></tr>';
   }).join('');
-  return titulo('<b>Clientes</b>', S.clients.length + ' clientes del periodo', isManager() ? '<button class="rb-btn rb-btn--primario rb-btn--sm" data-act="nuevo-cliente">' + ICON.plus + 'Nuevo cliente</button>' : '') +
-    '<div class="tabla-wrap"><table class="rb-tabla"><thead><tr><th>Cliente</th><th>Equipo asignado</th><th class="num">Horas esta semana</th><th class="num">Horas del periodo</th><th></th></tr></thead><tbody>' +
-    (rows || '<tr><td colspan="5" class="sec" style="text-align:center;padding:30px">Sin clientes.</td></tr>') + '</tbody></table></div>';
+  const filtros = '<div class="filtros"><select class="rb-select" data-filtro="sede"><option value="all">Todas las sedes</option>' +
+    S.sedes.map(function (x) { return '<option value="' + esc(x) + '"' + (UI.filtro.sede === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
+    '<option value="none"' + (UI.filtro.sede === 'none' ? ' selected' : '') + '>Sin sede</option></select></div>';
+  const sinSede = S.clients.filter(function (c) { return !c.sede && c.active !== false; }).length;
+  return titulo('<b>Clientes</b>', S.clients.length + ' clientes · ' + S.sedes.join(' y ') + (sinSede ? ' · ' + sinSede + ' sin sede asignada' : ''), isManager() ? '<button class="rb-btn rb-btn--primario rb-btn--sm" data-act="nuevo-cliente">' + ICON.plus + 'Nuevo cliente</button>' : '') +
+    filtros +
+    '<div class="tabla-wrap"><table class="rb-tabla"><thead><tr><th>Cliente</th><th>Sede</th><th>Equipo asignado</th><th class="num">Horas esta semana</th><th class="num">Horas del periodo</th><th></th></tr></thead><tbody>' +
+    (rows || '<tr><td colspan="6" class="sec" style="text-align:center;padding:30px">Sin clientes.</td></tr>') + '</tbody></table></div>';
 }
 
 /* ============================ Personas (gerente) ============================ */
@@ -740,7 +877,7 @@ function renderAjustes() {
       '<button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="seed">Recargar presupuesto base</button></div>'
     : '';
   const calendarioHtml = isGerente()
-    ? '<div class="rb-tarjeta" style="max-width:560px;margin-top:16px"><h2>Calendario</h2><p class="sec" style="margin:4px 0 14px">' + esc(rangoCalendario()) + '. Al ampliar, cada semana nueva toma 44 h de cargabilidad menos 8 h por cada festivo de Colombia; puedes ajustarla después desde el encabezado de la cuadrícula.</p>' +
+    ? '<div class="rb-tarjeta" style="max-width:560px;margin-top:16px"><h2>Calendario</h2><p class="sec" style="margin:4px 0 14px">' + esc(rangoCalendario()) + '. Cada semana tiene ' + fmtH(S.capacity) + ' h de cargabilidad; al ampliar, las semanas nuevas la toman igual y los festivos de Colombia se marcan en el tablero. Puedes ajustar una semana desde su encabezado en el presupuesto.</p>' +
       '<form id="form-ampliar" class="campo inline" style="align-items:flex-end"><div><label class="rb-etiqueta" for="amp-until">Ampliar hasta</label><input class="rb-input" id="amp-until" type="date" name="until" required value="' + esc(S.weeks.length ? addDays(S.weeks[S.weeks.length - 1].start, 7 * 13) : todayISO()) + '"></div>' +
       '<div style="flex:0 0 auto"><button class="rb-btn rb-btn--primario rb-btn--sm" type="submit">Ampliar calendario</button></div></form></div>'
     : '';
@@ -786,33 +923,46 @@ function opciones(list, value, vacio) {
   return (vacio !== undefined ? '<option value="">' + esc(vacio) + '</option>' : '') +
     list.map(function (o) { return '<option value="' + esc(o.value) + '"' + (String(o.value) === String(value == null ? '' : value) ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('');
 }
-function camposCelda(cell, w) {
-  return '<div class="campo inline"><div><label class="rb-etiqueta" for="c-hours">Horas</label><input class="rb-input" id="c-hours" type="number" name="hours" min="0" step="0.5" value="' + (cell.hours == null ? '' : cell.hours) + '"' + (w ? ' placeholder="máx. ' + fmtH(w.capacity) + '"' : '') + '></div>' +
-    '<div><label class="rb-etiqueta" for="c-phase">Fase</label><select class="rb-select" id="c-phase" name="phase">' + opciones(PHASE_DEFS.map(function (x) { return { value: x.id, label: x.label }; }), cell.phase, 'Sin fase') + '</select></div></div>' +
-    '<div class="campo"><label class="rb-etiqueta" for="c-note">Nota</label><input class="rb-input" id="c-note" type="text" name="note" maxlength="300" value="' + esc(cell.note || '') + '" placeholder="Opcional"></div>';
+/* Editor de una semana para un cliente y una persona: horas por día. */
+function tablaDias(clientId, personId, w) {
+  return '<div class="dias-ed">' + weekDays(w).map(function (d, i) {
+    const c = clientId ? cellOf(clientId, personId, d) : null;
+    return '<label class="dia-ed' + diaClases(d) + '" title="' + esc(diaTitulo(d)) + '"><span class="n">' + DIAS_LARGO[i].slice(0, 3) + ' <small>' + Number(d.slice(8, 10)) + '</small>' + (isHoliday(d) ? '<em>festivo</em>' : '') + '</span>' +
+      '<input class="rb-input" type="number" name="h' + i + '" min="0" max="24" step="0.5" value="' + (c && c.hours != null ? c.hours : '') + '" placeholder="–"></label>';
+  }).join('') + '</div>';
+}
+function camposFaseNota(cell) {
+  return '<div class="campo inline" style="margin-top:12px"><div><label class="rb-etiqueta" for="c-phase">Fase</label><select class="rb-select" id="c-phase" name="phase">' + opciones(PHASE_DEFS.map(function (x) { return { value: x.id, label: x.label }; }), cell.phase, 'Sin fase') + '</select></div>' +
+    '<div><label class="rb-etiqueta" for="c-note">Nota</label><input class="rb-input" id="c-note" type="text" name="note" maxlength="300" value="' + esc(cell.note || '') + '" placeholder="Opcional"></div></div>' +
+    '<p class="sec" style="margin-top:8px">Deja vacío un día para no asignarle horas. Elige <b>Vacaciones</b> sin horas para marcar la semana como vacaciones.</p>';
 }
 
 function modalCelda(m) {
   const c = clientById(m.clientId), p = personById(m.personId), w = weekByIdx(m.weekIdx);
-  const cell = budgetMap()[m.clientId + '|' + m.personId + '|' + m.weekIdx] || {};
-  const otras = hoursOf(m.personId, m.weekIdx) - (cell.hours || 0);
-  const body = '<p class="sec" style="margin-bottom:14px"><b class="az">' + esc(c ? c.name : '') + '</b> · ' + esc(p ? p.name : '') + ' · ' + esc(weekTitle(w)) + '<br>Ya tiene ' + fmtH(otras) + ' h en otros clientes esta semana; cargabilidad ' + (w ? fmtH(w.capacity) : '') + ' h.</p>' +
-    '<form id="form-celda" data-c="' + m.clientId + '" data-p="' + m.personId + '" data-w="' + m.weekIdx + '">' + camposCelda(cell, w) + '</form>';
-  const foot = (cell.hours != null || cell.phase || cell.note ? '<button class="rb-btn rb-btn--peligro rb-btn--sm" data-act="celda-vaciar">Quitar</button>' : '') +
-    '<span class="esp"></span><button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="cerrar-modal">Cancelar</button><button class="rb-btn rb-btn--primario rb-btn--sm" type="submit" form="form-celda">Guardar</button>';
-  return modalShell('Horas <b>asignadas</b>', body, foot);
+  const celdas = weekCells(m.clientId, m.personId, w).filter(Boolean);
+  const ref = celdas.find(function (x) { return x.phase || x.note; }) || {};
+  const propias = celdas.reduce(function (a, x) { return a + (x.hours || 0); }, 0);
+  const otras = hoursOf(m.personId, m.weekIdx) - propias;
+  const body = '<p class="sec" style="margin-bottom:14px"><b class="az">' + esc(c ? c.name : '') + '</b> · ' + esc(p ? p.name : '') + ' · ' + esc(weekTag(w) + ', ' + weekTitle(w)) +
+    '<br>Tiene ' + fmtH(otras) + ' h en otros clientes esta semana; cargabilidad ' + (w ? fmtH(w.capacity) : '') + ' h.</p>' +
+    '<form id="form-dias" data-c="' + m.clientId + '" data-p="' + m.personId + '" data-w="' + m.weekIdx + '">' + tablaDias(m.clientId, m.personId, w) + camposFaseNota(ref) + '</form>';
+  const foot = (celdas.length ? '<button class="rb-btn rb-btn--peligro rb-btn--sm" data-act="dias-vaciar">Quitar la semana</button>' : '') +
+    '<span class="esp"></span><button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="cerrar-modal">Cancelar</button><button class="rb-btn rb-btn--primario rb-btn--sm" type="submit" form="form-dias">Guardar</button>';
+  return modalShell('Horas por <b>día</b>', body, foot, { ancho: true });
 }
 
 function modalAgregar(m) {
   const p = personById(m.personId), w = weekByIdx(m.weekIdx);
   const ya = {};
-  S.budget.forEach(function (r) { if (r.personId === m.personId && r.weekIdx === m.weekIdx) ya[r.clientId] = true; });
-  const clientes = S.clients.filter(function (c) { return c.active !== false && !ya[c.id]; }).map(function (c) { return { value: c.id, label: c.name }; });
-  const body = '<p class="sec" style="margin-bottom:14px"><b class="az">' + esc(p ? p.name : '') + '</b> · ' + esc(weekTitle(w)) + ' · ya tiene ' + fmtH(hoursOf(m.personId, m.weekIdx)) + ' de ' + (w ? fmtH(w.capacity) : '') + ' h.</p>' +
-    '<form id="form-agregar" data-p="' + m.personId + '" data-w="' + m.weekIdx + '">' +
+  rowsWeek(m.weekIdx).forEach(function (r) { if (r.personId === m.personId) ya[r.clientId] = true; });
+  const clientes = S.clients.filter(function (c) { return c.active !== false && !ya[c.id]; })
+    .sort(function (a, b) { return sedeOrden(a.sede) - sedeOrden(b.sede) || a.name.localeCompare(b.name); })
+    .map(function (c) { return { value: c.id, label: (c.sede ? c.sede + ' · ' : '') + c.name }; });
+  const body = '<p class="sec" style="margin-bottom:14px"><b class="az">' + esc(p ? p.name : '') + '</b> · ' + esc(weekTag(w) + ', ' + weekTitle(w)) + ' · ya tiene ' + fmtH(hoursOf(m.personId, m.weekIdx)) + ' de ' + (w ? fmtH(w.capacity) : '') + ' h.</p>' +
+    '<form id="form-dias" data-p="' + m.personId + '" data-w="' + m.weekIdx + '">' +
     '<div class="campo"><label class="rb-etiqueta" for="a-client">Cliente</label><select class="rb-select" id="a-client" name="clientId" required>' + opciones(clientes, '', 'Elige un cliente') + '</select></div>' +
-    camposCelda({}, w) + '</form>';
-  return modalShell('Asignar <b>cliente</b>', body, '<span class="esp"></span><button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="cerrar-modal">Cancelar</button><button class="rb-btn rb-btn--primario rb-btn--sm" type="submit" form="form-agregar">Asignar</button>');
+    tablaDias(null, m.personId, w) + camposFaseNota({}) + '</form>';
+  return modalShell('Asignar <b>cliente</b>', body, '<span class="esp"></span><button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="cerrar-modal">Cancelar</button><button class="rb-btn rb-btn--primario rb-btn--sm" type="submit" form="form-dias">Asignar</button>', { ancho: true });
 }
 
 function modalFila() {
@@ -850,10 +1000,11 @@ function modalShowPassword(m) {
 }
 
 function modalCliente(m) {
-  const c = m.client || { name: '', active: true };
+  const c = m.client || { name: '', sede: '', active: true };
   const isNew = !m.client;
   const body = '<form id="form-cliente" data-id="' + (c.id || '') + '">' +
     '<div class="campo"><label class="rb-etiqueta" for="cl-name">Nombre</label><input class="rb-input" id="cl-name" type="text" name="name" required maxlength="160" value="' + esc(c.name) + '"></div>' +
+    '<div class="campo"><span class="rb-etiqueta">Sede</span>' + segmentos('sede', S.sedes.map(function (x) { return { id: x, label: x }; }).concat([{ id: '', label: 'Sin sede' }]), c.sede || '') + '</div>' +
     (isNew ? '' : '<div class="campo"><label class="check"><input type="checkbox" name="active"' + (c.active !== false ? ' checked' : '') + '> Cliente activo</label></div>') + '</form>';
   return modalShell(isNew ? 'Nuevo <b>cliente</b>' : 'Editar <b>cliente</b>', body, '<span class="esp"></span><button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="cerrar-modal">Cancelar</button><button class="rb-btn rb-btn--primario rb-btn--sm" type="submit" form="form-cliente">' + (isNew ? 'Crear' : 'Guardar') + '</button>');
 }
@@ -908,19 +1059,32 @@ async function withBusy(fn) {
   finally { UI.busy = false; }
 }
 
-async function saveCell(clientId, personId, weekIdx, hours, phase, note, msg) {
+/* Guarda los siete días de una semana para un cliente y una persona. */
+async function saveDias(clientId, personId, weekIdx, horas, phase, note, msg) {
+  const w = weekByIdx(weekIdx);
+  if (!w) return;
+  const dias = weekDays(w);
+  const rows = dias.map(function (d, i) {
+    const h = horas[i];
+    const marcar = h != null || (phase === 'vacaciones' && !isWeekend(d) && !isHoliday(d));
+    return marcar
+      ? { clientId: clientId, personId: personId, day: d, hours: h, phase: phase || null, note: note || null }
+      : { clientId: clientId, personId: personId, day: d, hours: null, phase: null, note: null };
+  });
   await withBusy(async function () {
-    const r = await api('PUT', '/api/budget', { rows: [{ clientId: clientId, personId: personId, weekIdx: weekIdx, hours: hours, phase: phase, note: note }] });
-    const saved = r.rows[0];
-    S.budget = S.budget.filter(function (x) { return !(x.clientId === clientId && x.personId === personId && x.weekIdx === weekIdx); });
-    if (!saved.deleted) S.budget.push(saved);
+    const r = await api('PUT', '/api/budget', { rows: rows });
+    const keys = {};
+    dias.forEach(function (d) { keys[clientId + '|' + personId + '|' + d] = true; });
+    S.budget = S.budget.filter(function (x) { return !keys[x.clientId + '|' + x.personId + '|' + x.day]; });
+    r.rows.forEach(function (x) { if (!x.deleted) S.budget.push(x); });
+    indexBudget();
     UI.modal = null;
     render();
     if (msg) toast(msg, 'ok');
-    const w = weekByIdx(weekIdx);
-    if (w && !saved.deleted && hoursOf(personId, weekIdx) > w.capacity) {
+    const total = hoursOf(personId, weekIdx);
+    if (total > w.capacity) {
       const p = personById(personId);
-      toast((p ? p.name : 'La persona') + ' queda con ' + fmtH(hoursOf(personId, weekIdx)) + ' h, por encima de la cargabilidad (' + fmtH(w.capacity) + ' h).', 'info');
+      toast('Sobrecarga: ' + (p ? p.name : 'la persona') + ' queda con ' + fmtH(total) + ' h en la ' + weekTag(w).toLowerCase() + ', por encima de las ' + fmtH(w.capacity) + ' h.', 'err');
     }
   });
 }
@@ -965,10 +1129,10 @@ async function submitCliente(form) {
   const id = form.dataset.id ? Number(form.dataset.id) : null;
   await withBusy(async function () {
     if (id) {
-      const r = await api('PATCH', '/api/clients?id=' + id, { name: data.name, active: data.active });
+      const r = await api('PATCH', '/api/clients?id=' + id, { name: data.name, sede: data.sede || null, active: data.active });
       S.clients = S.clients.map(function (c) { return c.id === id ? r.client : c; });
     } else {
-      const r = await api('POST', '/api/clients', { name: data.name });
+      const r = await api('POST', '/api/clients', { name: data.name, sede: data.sede || null });
       S.clients.push(r.client);
     }
     UI.modal = null;
@@ -1037,7 +1201,7 @@ async function logout() {
 
 function irASemana(personId) {
   if (isManager()) {
-    UI.filtro = { persona: 'all', cliente: 'all' };
+    UI.filtro.persona = 'all'; UI.filtro.cliente = 'all';
     setView('semana');
     const el = document.querySelector('[data-act="agregar"][data-p="' + personId + '"]');
     if (el) el.closest('.persona-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1069,13 +1233,13 @@ document.addEventListener('click', function (ev) {
     case 'semana-prev': { const i = S.weeks.findIndex(function (w) { return w.idx === UI.weekIdx; }); if (i > 0) { UI.weekIdx = S.weeks[i - 1].idx; render(); } break; }
     case 'semana-next': { const i = S.weeks.findIndex(function (w) { return w.idx === UI.weekIdx; }); if (i >= 0 && i < S.weeks.length - 1) { UI.weekIdx = S.weeks[i + 1].idx; render(); } break; }
     case 'semana-hoy': UI.weekIdx = currentWeekIdx(); render(); break;
-    case 'celda': UI.modal = { type: 'celda', clientId: Number(el.dataset.c), personId: Number(el.dataset.p), weekIdx: Number(el.dataset.w) }; render(); break;
+    case 'editar-dias': UI.modal = { type: 'celda', clientId: Number(el.dataset.c), personId: Number(el.dataset.p), weekIdx: Number(el.dataset.w) }; render(); break;
     case 'agregar': UI.modal = { type: 'agregar', personId: Number(el.dataset.p), weekIdx: Number(el.dataset.w) }; render(); break;
     case 'agregar-fila': UI.modal = { type: 'fila' }; render(); break;
     case 'editar-semana': UI.modal = { type: 'semana', idx: Number(el.dataset.w) }; render(); break;
-    case 'celda-vaciar': { const m = UI.modal; saveCell(m.clientId, m.personId, m.weekIdx, null, null, null, 'Horas retiradas.'); break; }
+    case 'dias-vaciar': { const m = UI.modal; saveDias(m.clientId, m.personId, m.weekIdx, [null, null, null, null, null, null, null], null, null, 'Semana retirada.'); break; }
     case 'ver-persona': irASemana(id); break;
-    case 'ver-cliente': UI.filtro = { persona: 'all', cliente: String(id) }; setView('presupuesto'); break;
+    case 'ver-cliente': UI.filtro.persona = 'all'; UI.filtro.cliente = String(id); UI.filtro.sede = 'all'; setView('presupuesto'); break;
     case 'nueva-persona': UI.modal = { type: 'persona', person: null }; render(); break;
     case 'editar-persona': UI.modal = { type: 'persona', person: personById(id) }; render(); break;
     case 'clave-persona': UI.modal = { type: 'setpw', personId: id }; render(); break;
@@ -1096,22 +1260,19 @@ document.addEventListener('submit', function (ev) {
   switch (form.id) {
     case 'form-login': submitLogin(form); break;
     case 'form-setup': submitSetup(form); break;
-    case 'form-celda': {
+    case 'form-dias': {
       const d = readForm(form);
-      saveCell(Number(form.dataset.c), Number(form.dataset.p), Number(form.dataset.w), d.hours === '' ? null : Number(d.hours), d.phase || null, d.note || null, 'Horas guardadas.');
-      break;
-    }
-    case 'form-agregar': {
-      const d = readForm(form);
-      if (!d.clientId) return;
-      saveCell(Number(d.clientId), Number(form.dataset.p), Number(form.dataset.w), d.hours === '' ? null : Number(d.hours), d.phase || null, d.note || null, 'Cliente asignado.');
+      const clientId = form.dataset.c ? Number(form.dataset.c) : Number(d.clientId);
+      if (!clientId) return;
+      const horas = [0, 1, 2, 3, 4, 5, 6].map(function (i) { return d['h' + i] === '' || d['h' + i] === undefined ? null : Number(d['h' + i]); });
+      saveDias(clientId, Number(form.dataset.p), Number(form.dataset.w), horas, d.phase || null, d.note || null, form.dataset.c ? 'Horas guardadas.' : 'Cliente asignado.');
       break;
     }
     case 'form-fila': {
       const d = readForm(form);
       if (!d.clientId || !d.personId) return;
       UI.filasExtra.push({ clientId: Number(d.clientId), personId: Number(d.personId) });
-      UI.filtro = { persona: 'all', cliente: 'all' };
+      UI.filtro.persona = 'all'; UI.filtro.cliente = 'all'; UI.filtro.sede = 'all';
       UI.modal = null; render();
       break;
     }
@@ -1119,7 +1280,7 @@ document.addEventListener('submit', function (ev) {
       const d = readForm(form);
       withBusy(async function () {
         const r = await api('PATCH', '/api/budget?action=week', { idx: Number(form.dataset.idx), label: d.label, month: d.month, capacity: Number(d.capacity) });
-        S.weeks = r.weeks; UI.modal = null; render(); toast('Semana ajustada.', 'ok');
+        S.weeks = r.weeks; indexBudget(); UI.modal = null; render(); toast('Semana ajustada.', 'ok');
       });
       break;
     }
@@ -1127,7 +1288,7 @@ document.addEventListener('submit', function (ev) {
       const d = readForm(form);
       withBusy(async function () {
         const r = await api('POST', '/api/budget?action=weeks', { until: d.until });
-        S.weeks = r.weeks; render(); toast('Calendario ampliado: ' + r.added + ' semanas nuevas.', 'ok');
+        S.weeks = r.weeks; (r.holidays || []).forEach(function (x) { S.holidays[x] = true; }); indexBudget(); render(); toast('Calendario ampliado: ' + r.added + ' semanas nuevas.', 'ok');
       });
       break;
     }
