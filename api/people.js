@@ -3,6 +3,9 @@
    GET    /api/people        -> gerente/senior: lista completa; junior: solo id, nombre y rol
    POST   /api/people        -> gerente: { name, email, role, password? }
    PATCH  /api/people?id=N   -> gerente: { name?, email?, role?, active?, password? }
+   POST   /api/people?action=merge -> gerente: { fromId, intoId } traspasa las horas de una
+                                      persona a otra y elimina la primera (cuentas duplicadas)
+   DELETE /api/people?id=N   -> gerente: elimina la persona y sus horas asignadas
 
    Solo el gerente administra cuentas. Al poner una contraseña a alguien se le
    marca "debe cambiarla" para que la reemplace en su primer ingreso. */
@@ -23,12 +26,13 @@ module.exports = async function handler(req, res) {
       const user = await auth.requireUser(req, res, sql);
       if (!user) return;
       const rows = await sql`
-        select p.id, p.name, p.email, p.role, p.active, p.password_hash, p.must_change_password, p.created_at
+        select p.id, p.name, p.email, p.role, p.active, p.password_hash, p.must_change_password, p.created_at,
+               (select count(*)::int from budget_days b where b.person_id = p.id) as dias
           from people p
          order by case p.role when 'gerente' then 0 when 'senior' then 1 else 2 end, p.name`;
       if (auth.canManage(user)) {
         return res.status(200).json({
-          people: rows.map(auth.publicPerson)
+          people: rows.map(function (r) { const p = auth.publicPerson(r); p.dias = Number(r.dias) || 0; return p; })
         });
       }
       // Junior: nombres para mostrar quién creó o comentó una tarea; nada más.
@@ -41,6 +45,51 @@ module.exports = async function handler(req, res) {
     const user = await auth.requireUser(req, res, sql, ['gerente']);
     if (!user) return;
     const body = store.readBody(req) || {};
+    const action = store.str(store.queryOf(req).action);
+
+    /* ---- fusionar dos cuentas de la misma persona ---- */
+    if (req.method === 'POST' && action === 'merge') {
+      const fromId = store.numOrNull(body.fromId);
+      const intoId = store.numOrNull(body.intoId);
+      if (!fromId || !intoId || fromId === intoId) return store.fail(res, 400, 'Indica la persona que se elimina y la que se conserva.');
+      if (fromId === user.id) return store.fail(res, 400, 'No puedes eliminar tu propia cuenta; fusiona la otra hacia la tuya.');
+      const a = (await sql`select * from people where id = ${fromId}`)[0];
+      const b = (await sql`select * from people where id = ${intoId}`)[0];
+      if (!a || !b) return store.fail(res, 404, 'La persona no existe.');
+
+      // Horas: las del origen pasan al destino; si ambas tienen el mismo cliente
+      // y día se suman las horas y se conserva la fase y la nota del destino.
+      const conflictos = await sql`
+        select s.id as sid, d.id as did, s.hours as sh, d.hours as dh
+          from budget_days s join budget_days d
+            on d.client_id = s.client_id and d.day = s.day and d.person_id = ${intoId}
+         where s.person_id = ${fromId}`;
+      for (const c of conflictos) {
+        const suma = (c.sh == null && c.dh == null) ? null : (Number(c.sh) || 0) + (Number(c.dh) || 0);
+        await sql`update budget_days set hours = ${suma} where id = ${c.did}`;
+        await sql`delete from budget_days where id = ${c.sid}`;
+      }
+      const movidas = await sql`update budget_days set person_id = ${intoId} where person_id = ${fromId} returning id`;
+
+      // Datos de cuenta: el destino toma el correo si no tenía, y el rol más alto.
+      const rango = { gerente: 3, senior: 2, junior: 1 };
+      const email = b.email || a.email || null;
+      const role = (rango[a.role] || 0) > (rango[b.role] || 0) ? a.role : b.role;
+      await sql`delete from people where id = ${fromId}`;
+      const rows = await sql`
+        update people set email = ${email}, role = ${role}, active = true where id = ${intoId} returning *`;
+      return res.status(200).json({ person: auth.publicPerson(rows[0]), moved: movidas.length + conflictos.length, removedId: fromId });
+    }
+
+    /* ---- eliminar ---- */
+    if (req.method === 'DELETE') {
+      const id = Number(store.queryOf(req).id);
+      if (!id) return store.fail(res, 400, 'Falta el id.');
+      if (id === user.id) return store.fail(res, 400, 'No puedes eliminar tu propia cuenta.');
+      const rows = await sql`delete from people where id = ${id} returning id`;
+      if (!rows.length) return store.fail(res, 404, 'La persona no existe.');
+      return res.status(200).json({ ok: true, removedId: id });
+    }
 
     if (req.method === 'POST') {
       const name = store.str(body.name, 120);
@@ -111,7 +160,7 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ person: auth.publicPerson(updated[0]) });
     }
 
-    res.setHeader('Allow', 'GET, POST, PATCH');
+    res.setHeader('Allow', 'GET, POST, PATCH, DELETE');
     return store.fail(res, 405, 'Método no permitido.');
 
   } catch (err) {

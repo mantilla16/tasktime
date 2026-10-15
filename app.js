@@ -45,7 +45,9 @@ const ICON = {
   edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4z"/></svg>',
   key: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3M15 8l3 3M18 5l3 3"/></svg>',
   logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M13 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg>',
-  warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L2.5 17.5A2 2 0 0 0 4.2 20.5h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>'
+  warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L2.5 17.5A2 2 0 0 0 4.2 20.5h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>',
+  merge: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v6a4 4 0 0 0 4 4h4"/><path d="M18 4v16"/><path d="M11 11l3 3-3 3"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg>'
 };
 const DIAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 const DIAS_LARGO = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -861,12 +863,16 @@ function renderPersonas() {
       '<td class="num">' + Object.keys(clientes).length + '</td>' +
       '<td style="text-align:right;white-space:nowrap">' +
       '<button class="icono-btn" data-act="editar-persona" data-id="' + p.id + '" title="Editar">' + ICON.edit + '</button> ' +
-      (msMode() ? '' : '<button class="icono-btn" data-act="clave-persona" data-id="' + p.id + '" title="Asignar contraseña">' + ICON.key + '</button>') +
+      (msMode() ? '' : '<button class="icono-btn" data-act="clave-persona" data-id="' + p.id + '" title="Asignar contraseña">' + ICON.key + '</button> ') +
+      (p.id === S.user.id ? '' :
+        '<button class="icono-btn" data-act="fusionar-persona" data-id="' + p.id + '" title="Fusionar con otra persona (traspasa sus horas y la elimina)">' + ICON.merge + '</button> ' +
+        '<button class="icono-btn peligro" data-act="eliminar-persona" data-id="' + p.id + '" title="Eliminar">' + ICON.trash + '</button>') +
       '</td></tr>';
   }).join('');
   return titulo('<b>Personas</b>', msMode() ? 'Cada persona entra con su cuenta de Microsoft @' + esc(S.dominio) + '. Registra aquí su correo para que al entrar se reconozca con su rol; quien entre sin estar registrada queda como junior.' : 'Cuentas y roles del equipo. Para dar acceso, registra el correo y asigna una contraseña temporal.', '<button class="rb-btn rb-btn--primario rb-btn--sm" data-act="nueva-persona">' + ICON.plus + 'Nueva persona</button>') +
     '<div class="tabla-wrap"><table class="rb-tabla"><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Acceso</th><th class="num">Clientes</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-    '<p class="sec" style="margin-top:14px"><b>Gerente:</b> todo, incluida esta pantalla. <b>Senior:</b> ve y asigna horas a todo el equipo. <b>Junior:</b> solo ve sus propias horas.</p>';
+    '<p class="sec" style="margin-top:14px"><b>Gerente:</b> todo, incluida esta pantalla. <b>Senior:</b> ve y asigna horas a todo el equipo. <b>Junior:</b> solo ve sus propias horas.</p>' +
+    '<p class="sec" style="margin-top:6px">¿Una persona quedó repetida (una con las horas del Excel y otra creada al entrar con Microsoft)? Usa <b>Fusionar</b> en la repetida y elige a cuál cuenta traspasar sus horas; la repetida se elimina y la que queda conserva correo y horas.</p>';
 }
 
 /* ============================ Ajustes ============================ */
@@ -902,6 +908,7 @@ function renderModal() {
     case 'cliente': inner = modalCliente(m); break;
     case 'password': inner = modalPassword(m); break;
     case 'semana': inner = modalSemana(m); break;
+    case 'fusionar': inner = modalFusionar(m); break;
     case 'confirm': inner = modalConfirm(m); break;
     default: return '';
   }
@@ -1029,6 +1036,17 @@ function modalSemana(m) {
     '<div class="campo" style="max-width:200px"><label class="rb-etiqueta" for="s-cap">Cargabilidad (horas disponibles)</label><input class="rb-input" id="s-cap" type="number" name="capacity" min="0" max="168" step="1" required value="' + fmtH(w.capacity) + '"></div>' +
     '</form>';
   return modalShell('Ajustar <b>semana</b>', body, '<span class="esp"></span><button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="cerrar-modal">Cancelar</button><button class="rb-btn rb-btn--primario rb-btn--sm" type="submit" form="form-semana">Guardar</button>');
+}
+
+function modalFusionar(m) {
+  const p = personById(m.personId);
+  if (!p) return '';
+  const destinos = sortPeople(S.people.filter(function (x) { return x.id !== p.id && x.active !== false; }))
+    .map(function (x) { return { value: x.id, label: x.name + ' · ' + ROLE_LABELS[x.role] + (x.email ? ' · ' + x.email : ' · sin correo') + (x.dias ? ' · ' + x.dias + ' días con horas' : '') }; });
+  const body = '<p style="margin-bottom:12px">Se traspasarán las horas de <b class="az">' + esc(p.name) + '</b>' + (p.dias ? ' (' + p.dias + ' días con horas)' : '') + (p.email ? ', correo ' + esc(p.email) : ', sin correo') + ' a la persona que elijas, y <b>' + esc(p.name) + ' se eliminará</b>.</p>' +
+    '<ul class="rb-lista"><li>La persona que queda conserva su correo; si no tenía, toma el de la eliminada.</li><li>Si ambas tenían horas el mismo día para el mismo cliente, se suman.</li><li>Se conserva el rol más alto de las dos.</li></ul>' +
+    '<form id="form-fusionar" data-from="' + p.id + '"><div class="campo"><label class="rb-etiqueta" for="f-into">Traspasar a</label><select class="rb-select" id="f-into" name="intoId" required>' + opciones(destinos, '', 'Elige la persona que se conserva') + '</select></div></form>';
+  return modalShell('Fusionar <b>personas</b>', body, '<span class="esp"></span><button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="cerrar-modal">Cancelar</button><button class="rb-btn rb-btn--primario rb-btn--sm" type="submit" form="form-fusionar">Fusionar y eliminar</button>');
 }
 
 function modalConfirm(m) {
@@ -1243,6 +1261,20 @@ document.addEventListener('click', function (ev) {
     case 'nueva-persona': UI.modal = { type: 'persona', person: null }; render(); break;
     case 'editar-persona': UI.modal = { type: 'persona', person: personById(id) }; render(); break;
     case 'clave-persona': UI.modal = { type: 'setpw', personId: id }; render(); break;
+    case 'fusionar-persona': UI.modal = { type: 'fusionar', personId: id }; render(); break;
+    case 'eliminar-persona': {
+      const p = personById(id);
+      if (!p) break;
+      confirmDialog({ title: 'Eliminar <b>persona</b>', danger: true, okLabel: 'Eliminar',
+        text: 'Se eliminará a ' + p.name + (p.dias ? ' y sus ' + p.dias + ' días con horas asignadas. Si quieres conservar esas horas en otra cuenta, usa Fusionar en vez de Eliminar.' : '. No tiene horas asignadas.'),
+        onOk: async function () {
+          await api('DELETE', '/api/people?id=' + id);
+          S.people = S.people.filter(function (x) { return x.id !== id; });
+          S.budget = S.budget.filter(function (x) { return x.personId !== id; });
+          indexBudget(); UI.modal = null; render(); toast('Persona eliminada.', 'ok');
+        } });
+      break;
+    }
     case 'nuevo-cliente': UI.modal = { type: 'cliente', client: null }; render(); break;
     case 'editar-cliente': UI.modal = { type: 'cliente', client: clientById(id) }; render(); break;
     case 'cambiar-clave': UI.modal = { type: 'password', forced: false }; render(); break;
@@ -1289,6 +1321,18 @@ document.addEventListener('submit', function (ev) {
       withBusy(async function () {
         const r = await api('POST', '/api/budget?action=weeks', { until: d.until });
         S.weeks = r.weeks; (r.holidays || []).forEach(function (x) { S.holidays[x] = true; }); indexBudget(); render(); toast('Calendario ampliado: ' + r.added + ' semanas nuevas.', 'ok');
+      });
+      break;
+    }
+    case 'form-fusionar': {
+      const d = readForm(form);
+      const fromId = Number(form.dataset.from), intoId = Number(d.intoId);
+      if (!intoId) return;
+      withBusy(async function () {
+        const r = await api('POST', '/api/people?action=merge', { fromId: fromId, intoId: intoId });
+        await loadAll();
+        UI.modal = null; render();
+        toast('Listo: ' + r.moved + ' días de horas traspasados a ' + r.person.name + '.', 'ok');
       });
       break;
     }

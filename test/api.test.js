@@ -206,6 +206,39 @@ async function waitForServer() {
     r = await senior('PUT', '/api/budget', { rows: [{ clientId: nuevo.id, personId: paula.id, day: nueva.start, hours: 6, phase: 'cierre' }] });
     assert.strictEqual(r.status, 200, 'se pueden asignar horas en las semanas nuevas');
 
+    /* ---- fusionar cuentas duplicadas y eliminar personas ---- */
+    r = await gerente('POST', '/api/people', { name: 'Paula Ariza Duplicada', email: 'paula.ariza@ejemplo.test', role: 'junior' });
+    assert.strictEqual(r.status, 201);
+    const dup = r.body.person;
+    r = await senior('PUT', '/api/budget', { rows: [
+      { clientId: kaia.id, personId: dup.id, day: '2026-06-16', hours: 3, phase: 'cierre' },
+      { clientId: nuevo.id, personId: dup.id, day: '2026-06-16', hours: 2, phase: 'cierre' }
+    ] });
+    assert.strictEqual(r.status, 200);
+    r = await junior('POST', '/api/people?action=merge', { fromId: dup.id, intoId: paula.id });
+    assert.strictEqual(r.status, 403, 'solo el gerente fusiona');
+    r = await gerente('POST', '/api/people?action=merge', { fromId: dup.id, intoId: paula.id });
+    assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+    assert.strictEqual(r.body.moved, 2);
+    assert.strictEqual(r.body.person.email, 'paula@ejemplo.test', 'el destino conserva su correo');
+    r = await gerente('GET', '/api/people');
+    assert.ok(!r.body.people.some(function (p) { return p.id === dup.id; }), 'la duplicada desaparece');
+    r = await gerente('GET', '/api/budget');
+    const sumada = r.body.rows.find(function (x) { return x.personId === paula.id && x.clientId === nuevo.id && x.day === '2026-06-16'; });
+    assert.strictEqual(sumada.hours, 7, 'mismo cliente y día: las horas se suman (5 + 2)');
+    const movida = r.body.rows.find(function (x) { return x.personId === paula.id && x.clientId === kaia.id && x.day === '2026-06-16'; });
+    assert.ok(movida && movida.hours === 3, 'las demás se traspasan');
+
+    r = await gerente('POST', '/api/people', { name: 'Temporal', role: 'junior' });
+    const temp = r.body.person;
+    r = await senior('DELETE', '/api/people?id=' + temp.id);
+    assert.strictEqual(r.status, 403, 'solo el gerente elimina');
+    r = await gerente('DELETE', '/api/people?id=' + temp.id);
+    assert.strictEqual(r.status, 200);
+    r = await gerente('GET', '/api/auth');
+    r = await gerente('DELETE', '/api/people?id=' + r.body.user.id);
+    assert.strictEqual(r.status, 400, 'el gerente no se elimina a sí mismo');
+
     /* ---- login con Microsoft: sin configurar responde 503, nunca abre sesión ---- */
     r = await client()('POST', '/api/auth?action=microsoft', { idToken: 'a.b.c' });
     assert.strictEqual(r.status, 503);

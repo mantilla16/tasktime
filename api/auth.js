@@ -81,6 +81,19 @@ module.exports = async function handler(req, res) {
       if (person && !person.active) return store.fail(res, 403, 'Tu cuenta está desactivada. Habla con el gerente.');
 
       if (!person) {
+        // Persona cargada del Excel sin correo y con el mismo nombre: se le
+        // vincula el correo en vez de crear una cuenta duplicada.
+        const porNombre = await sql`
+          select * from people
+           where email is null and active = true
+             and lower(unaccent_simple(name)) = lower(unaccent_simple(${perfil.nombre}))
+           limit 1`.catch(function () { return []; });
+        if (porNombre.length) {
+          const upd = await sql`update people set email = ${perfil.correo} where id = ${porNombre[0].id} returning *`;
+          person = upd[0];
+        }
+      }
+      if (!person) {
         const bootstrap = await setupRequired(sql);
         const role = bootstrap ? 'gerente' : 'junior';
         const created = await sql`

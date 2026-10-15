@@ -185,6 +185,13 @@ async function ensureSchema(sql) {
       value text
     )`;
 
+  // Comparar nombres sin acentos ni dobles espacios (p. ej. "Pérez" = "Perez").
+  await sql`
+    create or replace function unaccent_simple(t text) returns text
+    language sql immutable as $$
+      select trim(regexp_replace(translate(coalesce(t, ''), 'áéíóúÁÉÍÓÚñÑüÜ', 'aeiouAEIOUnNuU'), '\\s+', ' ', 'g'))
+    $$`;
+
   await migrateWeeklyToDays(sql);
   schemaReady = true;
 }
