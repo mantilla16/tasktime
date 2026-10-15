@@ -151,6 +151,7 @@ module.exports = async function handler(req, res) {
           saved.push({ clientId: clientId, personId: personId, day: day, deleted: true });
           continue;
         }
+        await sql`insert into assignments (client_id, person_id) values (${clientId}, ${personId}) on conflict do nothing`;
         const rows = await sql`
           insert into budget_days (client_id, person_id, day, hours, phase, note)
           values (${clientId}, ${personId}, ${day}, ${hours}, ${phase}, ${note})

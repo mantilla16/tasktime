@@ -206,6 +206,26 @@ async function waitForServer() {
     r = await senior('PUT', '/api/budget', { rows: [{ clientId: nuevo.id, personId: paula.id, day: nueva.start, hours: 6, phase: 'cierre' }] });
     assert.strictEqual(r.status, 200, 'se pueden asignar horas en las semanas nuevas');
 
+    /* ---- asignación de clientes, independiente de las horas ---- */
+    r = await gerente('GET', '/api/assignments');
+    assert.strictEqual(r.status, 200);
+    assert.ok(r.body.assignments.some(function (a) { return a.personId === paula.id && a.clientId === cebCliente.id; }), 'las parejas del Excel quedan asignadas');
+    r = await junior('POST', '/api/assignments', { clientId: kaia.id, personId: paula.id });
+    assert.strictEqual(r.status, 403);
+    r = await senior('POST', '/api/assignments', { clientId: kaia.id, personId: roberto.id });
+    assert.strictEqual(r.status, 201, 'asignar sin horas');
+    r = await senior('POST', '/api/assignments', { clientId: kaia.id, personId: roberto.id });
+    assert.strictEqual(r.status, 201, 'repetir no falla');
+    r = await junior('GET', '/api/assignments');
+    assert.ok(r.body.assignments.every(function (a) { return a.personId === paula.id; }), 'el junior solo ve sus asignaciones');
+    r = await senior('PUT', '/api/budget', { rows: [{ clientId: kaia.id, personId: roberto.id, day: '2026-06-17', hours: 4 }] });
+    assert.strictEqual(r.status, 200);
+    r = await senior('DELETE', '/api/assignments?clientId=' + kaia.id + '&personId=' + roberto.id);
+    assert.strictEqual(r.status, 200);
+    assert.strictEqual(r.body.removedDays, 1, 'quitar el cliente borra también sus horas');
+    r = await gerente('GET', '/api/assignments');
+    assert.ok(!r.body.assignments.some(function (a) { return a.personId === roberto.id && a.clientId === kaia.id; }));
+
     /* ---- fusionar cuentas duplicadas y eliminar personas ---- */
     r = await gerente('POST', '/api/people', { name: 'Paula Ariza Duplicada', email: 'paula.ariza@ejemplo.test', role: 'junior' });
     assert.strictEqual(r.status, 201);
@@ -221,6 +241,8 @@ async function waitForServer() {
     assert.strictEqual(r.status, 200, JSON.stringify(r.body));
     assert.strictEqual(r.body.moved, 2);
     assert.strictEqual(r.body.person.email, 'paula@ejemplo.test', 'el destino conserva su correo');
+    r = await gerente('GET', '/api/assignments');
+    assert.ok(r.body.assignments.some(function (a) { return a.personId === paula.id && a.clientId === kaia.id; }), 'las asignaciones también pasan al destino');
     r = await gerente('GET', '/api/people');
     assert.ok(!r.body.people.some(function (p) { return p.id === dup.id; }), 'la duplicada desaparece');
     r = await gerente('GET', '/api/budget');

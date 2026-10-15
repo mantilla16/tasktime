@@ -12,12 +12,11 @@
    dibujar con render() tras cada cambio.
    ========================================================================= */
 
-const S = { user: null, setupRequired: false, dominio: 'rbcol.co', msClientId: null, msTenantId: null, people: [], clients: [], sedes: ['Barranquilla', 'Santa Marta'], weeks: [], holidays: {}, capacity: 42, budget: [], loaded: false };
+const S = { user: null, setupRequired: false, dominio: 'rbcol.co', msClientId: null, msTenantId: null, people: [], clients: [], sedes: ['Barranquilla', 'Santa Marta'], weeks: [], holidays: {}, capacity: 42, budget: [], assignments: [], loaded: false };
 const UI = {
   view: null,
   weekIdx: null,
   filtro: { persona: 'all', cliente: 'all', mes: 'all', sede: 'all' },
-  filasExtra: [],
   modal: null,
   busy: false,
   authError: null,
@@ -99,7 +98,7 @@ function sortPeople(list) {
 function activePeople() { return sortPeople(S.people.filter(function (p) { return p.active !== false; })); }
 function teamPeople() {
   // Quienes reciben horas: todo el equipo activo salvo gerentes sin presupuesto.
-  return activePeople().filter(function (p) { return p.role !== 'gerente' || S.budget.some(function (r) { return r.personId === p.id; }); });
+  return activePeople().filter(function (p) { return p.role !== 'gerente' || S.assignments.some(function (a) { return a.personId === p.id; }); });
 }
 function currentWeekIdx() {
   const t = todayISO();
@@ -180,6 +179,9 @@ function sobrecargados(weekIdx, people) {
   return people.filter(function (p) { return hoursOf(p.id, weekIdx) > w.capacity; });
 }
 function sedeLabel(sede) { return sede || 'Sin sede'; }
+function isAssigned(clientId, personId) { return S.assignments.some(function (a) { return a.clientId === clientId && a.personId === personId; }); }
+function clientsOf(personId) { return S.assignments.filter(function (a) { return a.personId === personId; }).map(function (a) { return a.clientId; }); }
+function peopleOf(clientId) { return S.assignments.filter(function (a) { return a.clientId === clientId; }).map(function (a) { return a.personId; }); }
 function cargaClass(hours, capacity) {
   if (!hours) return 'carga-0';
   if (!capacity) return 'carga-2';
@@ -237,7 +239,8 @@ async function api(method, url, body) {
 }
 
 async function loadAll() {
-  const results = await Promise.all([api('GET', '/api/people'), api('GET', '/api/clients'), api('GET', '/api/budget')]);
+  const results = await Promise.all([api('GET', '/api/people'), api('GET', '/api/clients'), api('GET', '/api/budget'), api('GET', '/api/assignments')]);
+  S.assignments = results[3].assignments;
   S.people = results[0].people;
   S.clients = results[1].clients;
   S.sedes = results[1].sedes || S.sedes;
@@ -595,8 +598,12 @@ function renderSemana(mine) {
 
   const cards = people.map(function (p) {
     const mias = {};
+    clientsOf(p.id).forEach(function (cid) { mias[cid] = 0; });
     filas.forEach(function (r) { if (r.personId === p.id) mias[r.clientId] = (mias[r.clientId] || 0) + (r.hours || 0); });
-    const clientes = Object.keys(mias).map(Number).sort(function (a, b) { return mias[b] - mias[a]; });
+    const clientes = Object.keys(mias).map(Number).sort(function (a, b) {
+      const ca = clientById(a), cb = clientById(b);
+      return (mias[b] - mias[a]) || sedeOrden(ca && ca.sede) - sedeOrden(cb && cb.sede) || ((ca ? ca.name : '').localeCompare(cb ? cb.name : ''));
+    });
     const h = hoursOf(p.id, w.idx);
     const pct = w.capacity ? Math.min(100, Math.round(h / w.capacity * 100)) : 0;
     const lineas = clientes.length ? clientes.map(function (cid) {
@@ -605,16 +612,24 @@ function renderSemana(mine) {
       const fases = {}; celdas.forEach(function (x) { if (x.phase) fases[x.phase] = true; });
       const nota = (celdas.find(function (x) { return x.note; }) || {}).note;
       const vac = celdas.some(function (x) { return x.phase === 'vacaciones'; }) && !mias[cid];
-      return '<div class="linea' + (editable ? ' editable' : '') + '"' + (editable ? ' data-act="editar-dias" data-c="' + cid + '" data-p="' + p.id + '" data-w="' + w.idx + '"' : '') + '>' +
+      const sinHoras = !celdas.length;
+      const attrs = (editable ? ' data-act="editar-dias" data-c="' + cid + '" data-p="' + p.id + '" data-w="' + w.idx + '"' : '');
+      if (sinHoras) {
+        // Cliente asignado sin horas esta semana: una línea compacta.
+        return '<div class="linea compacta' + (editable ? ' editable' : '') + '"' + attrs + ' title="' + (editable ? 'Clic para repartir horas esta semana' : '') + '">' +
+          '<div class="cli">' + esc(c ? c.name : '') + (c && c.sede ? ' <span class="sec">· ' + esc(c.sede) + '</span>' : '') + '</div>' +
+          '<span class="hrs sec">sin horas esta semana</span></div>';
+      }
+      return '<div class="linea' + (editable ? ' editable' : '') + '"' + attrs + '>' +
         '<div class="cli">' + esc(c ? c.name : '') + (c && c.sede ? ' <span class="sec">· ' + esc(c.sede) + '</span>' : '') + (nota ? '<span class="nota">' + esc(nota) + '</span>' : '') + '</div>' +
         diasMini(cid, p.id, w) +
         '<span class="ph ph-' + (Object.keys(fases)[0] || '') + '">' + esc(Object.keys(fases).length ? Object.keys(fases).map(phaseLabel).join(' / ') : 'Sin fase') + '</span>' +
-        '<span class="hrs num">' + (vac ? 'Vac.' : fmtH(mias[cid]) + ' h') + '</span></div>';
-    }).join('') : '<div class="linea-vacia">Sin horas asignadas esta semana.</div>';
+        '<span class="hrs num' + (sinHoras ? ' sec' : '') + '">' + (vac ? 'Vac.' : sinHoras ? 'sin horas' : fmtH(mias[cid]) + ' h') + '</span></div>';
+    }).join('') : '<div class="linea-vacia">Sin clientes asignados.</div>';
     const sobreP = h > w.capacity;
     return '<div class="rb-tarjeta persona-card' + (sobreP ? ' sobre' : '') + '">' +
       '<div class="persona-head"><div class="avatar ' + (p.role === 'junior' ? 'gris' : p.role === 'gerente' ? 'azul' : '') + '">' + esc(initials(p.name)) + '</div>' +
-      '<div><div class="nombre">' + esc(p.name) + '</div><div class="meta">' + ROLE_LABELS[p.role] + ' · ' + clientes.length + ' cliente' + (clientes.length === 1 ? '' : 's') + '</div></div>' +
+      '<div><div class="nombre">' + esc(p.name) + '</div><div class="meta">' + ROLE_LABELS[p.role] + ' · ' + clientes.length + ' cliente' + (clientes.length === 1 ? '' : 's') + ' asignado' + (clientes.length === 1 ? '' : 's') + '</div></div>' +
       '<div class="total"><div class="h num' + (sobreP ? ' sobre' : '') + '">' + fmtH(h) + ' h</div><div class="c">de ' + fmtH(w.capacity) + '</div></div></div>' +
       '<div class="barra"><i class="' + barraClass(h, w.capacity) + '" style="width:' + pct + '%"></i></div>' +
       (sobreP ? '<div class="aviso-sobre">' + ICON.warn + 'Sobrecarga: ' + fmtH(h - w.capacity) + ' h por encima de la cargabilidad.</div>' : '') +
@@ -659,8 +674,8 @@ function filasPresupuesto(mine) {
   const seen = {};
   const rows = [];
   function add(c, p) { const k = c + '|' + p; if (seen[k]) return; seen[k] = true; rows.push({ clientId: c, personId: p }); }
+  S.assignments.forEach(function (a) { add(a.clientId, a.personId); });
   S.budget.forEach(function (r) { add(r.clientId, r.personId); });
-  if (!mine) UI.filasExtra.forEach(function (r) { add(r.clientId, r.personId); });
   return rows.map(function (r) { return { clientId: r.clientId, personId: r.personId, client: clientById(r.clientId), person: personById(r.personId) }; })
     .filter(function (r) { return r.client && r.person; })
     .sort(function (a, b) {
@@ -713,14 +728,14 @@ function renderPresupuesto(mine) {
     (mine ? '' :
     '<select class="rb-select" data-filtro="persona"><option value="all">Todas las personas</option>' + activePeople().map(function (p) { return '<option value="' + p.id + '"' + (UI.filtro.persona === String(p.id) ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('') + '</select>' +
     '<select class="rb-select" data-filtro="cliente"><option value="all">Todos los clientes</option>' + S.clients.map(function (c) { return '<option value="' + c.id + '"' + (UI.filtro.cliente === String(c.id) ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</select>' +
-    (editable ? '<button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="agregar-fila">' + ICON.plus + 'Agregar fila</button>' : '')) +
+    (editable ? '<button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="agregar-fila">' + ICON.plus + 'Asignar cliente</button>' : '')) +
     '</div>';
 
   let grid;
   if (!S.weeks.length) {
     grid = '<div class="vacio"><h3>No hay presupuesto cargado</h3><p>' + (isGerente() ? 'Carga el presupuesto base desde Ajustes.' : 'El gerente aún no ha cargado el presupuesto.') + '</p></div>';
   } else if (!rows.length) {
-    grid = '<div class="vacio"><h3>' + (mine ? 'No tienes horas presupuestadas' : 'Sin filas para mostrar') + '</h3><p>' + (mine ? 'Cuando te asignen horas aparecerán aquí.' : 'Cambia los filtros o agrega una fila.') + '</p></div>';
+    grid = '<div class="vacio"><h3>' + (mine ? 'No tienes clientes asignados' : 'Sin filas para mostrar') + '</h3><p>' + (mine ? 'Cuando te asignen un cliente aparecerá aquí.' : 'Cambia los filtros o asigna un cliente a una persona.') + '</p></div>';
   } else {
     const nCols = 2 + semanas.length * 8;
     let lastSede = '__', lastClient = null;
@@ -771,10 +786,11 @@ function renderEquipo() {
   const cur = currentWeekIdx();
   const w = weekByIdx(cur);
   // El equipo que recibe horas: gerentes solo si tienen presupuesto.
-  const people = sortPeople(S.people).filter(function (p) { return p.role !== 'gerente' || S.budget.some(function (r) { return r.personId === p.id; }); });
+  const people = sortPeople(S.people).filter(function (p) { return p.role !== 'gerente' || S.assignments.some(function (a) { return a.personId === p.id; }); });
   const cards = people.map(function (p) {
     const clientes = {};
     let total = 0;
+    clientsOf(p.id).forEach(function (cid) { clientes[cid] = true; });
     S.budget.forEach(function (r) { if (r.personId === p.id) { clientes[r.clientId] = true; total += r.hours || 0; } });
     const h = w ? hoursOf(p.id, cur) : 0;
     return '<div class="rb-tarjeta equipo-card' + (p.active === false ? ' inactivo' : '') + '" data-act="ver-persona" data-id="' + p.id + '">' +
@@ -784,7 +800,7 @@ function renderEquipo() {
       '<div class="stats">' + (w ? '<span class="num"><b class="az">' + fmtH(h) + '</b> / ' + fmtH(w.capacity) + ' h esta semana</span>' : '') +
       '<span>' + Object.keys(clientes).length + ' clientes</span><span class="num">' + fmtH(total) + ' h en el periodo</span></div></div></div>';
   }).join('');
-  const conPresupuesto = people.filter(function (p) { return p.active !== false && S.budget.some(function (r) { return r.personId === p.id; }); });
+  const conPresupuesto = people.filter(function (p) { return p.active !== false; });
   return titulo('Carga del <b>equipo</b>', 'Horas asignadas por semana frente a la cargabilidad. Haz clic en una persona para ver su semana.') +
     '<div class="equipo-grid">' + cards + '</div>' +
     '<h2 style="margin-bottom:4px">Mapa de carga semanal</h2><p class="sec" style="margin-bottom:12px">Suma de horas por semana. Naranja: por encima de las ' + fmtH(S.capacity) + ' h de cargabilidad.</p>' +
@@ -821,6 +837,7 @@ function renderClientes() {
   const rows = lista.map(function (c) {
     const team = {};
     let total = 0, semana = 0;
+    peopleOf(c.id).forEach(function (pid) { team[pid] = true; });
     S.budget.forEach(function (r) { if (r.clientId === c.id) { team[r.personId] = true; total += r.hours || 0; } });
     rowsWeek(cur).forEach(function (r) { if (r.clientId === c.id) semana += r.hours || 0; });
     const names = sortPeople(Object.keys(team).map(function (id) { return personById(Number(id)); }).filter(Boolean));
@@ -854,7 +871,7 @@ function renderPersonas() {
       : p.mustChangePassword ? '<span class="estado gris">Debe cambiar clave</span>'
       : '<span class="estado ok">Activa</span>';
     const clientes = {};
-    S.budget.forEach(function (r) { if (r.personId === p.id) clientes[r.clientId] = true; });
+    clientsOf(p.id).forEach(function (cid) { clientes[cid] = true; });
     return '<tr' + (p.active === false ? ' class="inactivo"' : '') + '>' +
       '<td><span class="persona"><span class="avatar sm ' + (p.role === 'junior' ? 'gris' : p.role === 'gerente' ? 'azul' : '') + '">' + esc(initials(p.name)) + '</span><b class="az">' + esc(p.name) + '</b>' + (p.id === S.user.id ? ' <span class="sec">(tú)</span>' : '') + '</span></td>' +
       '<td>' + esc(p.email || '—') + '</td>' +
@@ -953,7 +970,8 @@ function modalCelda(m) {
   const body = '<p class="sec" style="margin-bottom:14px"><b class="az">' + esc(c ? c.name : '') + '</b> · ' + esc(p ? p.name : '') + ' · ' + esc(weekTag(w) + ', ' + weekTitle(w)) +
     '<br>Tiene ' + fmtH(otras) + ' h en otros clientes esta semana; cargabilidad ' + (w ? fmtH(w.capacity) : '') + ' h.</p>' +
     '<form id="form-dias" data-c="' + m.clientId + '" data-p="' + m.personId + '" data-w="' + m.weekIdx + '">' + tablaDias(m.clientId, m.personId, w) + camposFaseNota(ref) + '</form>';
-  const foot = (celdas.length ? '<button class="rb-btn rb-btn--peligro rb-btn--sm" data-act="dias-vaciar">Quitar la semana</button>' : '') +
+  const foot = (celdas.length ? '<button class="rb-btn rb-btn--texto rb-btn--sm" data-act="dias-vaciar">Vaciar esta semana</button>' : '') +
+    '<button class="rb-btn rb-btn--peligro rb-btn--sm" data-act="quitar-cliente" data-c="' + m.clientId + '" data-p="' + m.personId + '">Quitar cliente</button>' +
     '<span class="esp"></span><button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="cerrar-modal">Cancelar</button><button class="rb-btn rb-btn--primario rb-btn--sm" type="submit" form="form-dias">Guardar</button>';
   return modalShell('Horas por <b>día</b>', body, foot, { ancho: true });
 }
@@ -961,13 +979,14 @@ function modalCelda(m) {
 function modalAgregar(m) {
   const p = personById(m.personId), w = weekByIdx(m.weekIdx);
   const ya = {};
-  rowsWeek(m.weekIdx).forEach(function (r) { if (r.personId === m.personId) ya[r.clientId] = true; });
+  clientsOf(m.personId).forEach(function (cid) { ya[cid] = true; });
   const clientes = S.clients.filter(function (c) { return c.active !== false && !ya[c.id]; })
     .sort(function (a, b) { return sedeOrden(a.sede) - sedeOrden(b.sede) || a.name.localeCompare(b.name); })
     .map(function (c) { return { value: c.id, label: (c.sede ? c.sede + ' · ' : '') + c.name }; });
   const body = '<p class="sec" style="margin-bottom:14px"><b class="az">' + esc(p ? p.name : '') + '</b> · ' + esc(weekTag(w) + ', ' + weekTitle(w)) + ' · ya tiene ' + fmtH(hoursOf(m.personId, m.weekIdx)) + ' de ' + (w ? fmtH(w.capacity) : '') + ' h.</p>' +
     '<form id="form-dias" data-p="' + m.personId + '" data-w="' + m.weekIdx + '">' +
     '<div class="campo"><label class="rb-etiqueta" for="a-client">Cliente</label><select class="rb-select" id="a-client" name="clientId" required>' + opciones(clientes, '', 'Elige un cliente') + '</select></div>' +
+    '<p class="sec" style="margin-bottom:8px">El cliente queda asignado a la persona aunque no escribas horas. Si quieres, reparte ya las horas de esta semana:</p>' +
     tablaDias(null, m.personId, w) + camposFaseNota({}) + '</form>';
   return modalShell('Asignar <b>cliente</b>', body, '<span class="esp"></span><button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="cerrar-modal">Cancelar</button><button class="rb-btn rb-btn--primario rb-btn--sm" type="submit" form="form-dias">Asignar</button>', { ancho: true });
 }
@@ -976,8 +995,8 @@ function modalFila() {
   const body = '<form id="form-fila">' +
     '<div class="campo"><label class="rb-etiqueta" for="r-client">Cliente</label><select class="rb-select" id="r-client" name="clientId" required>' + opciones(S.clients.filter(function (c) { return c.active !== false; }).map(function (c) { return { value: c.id, label: c.name }; }), '', 'Elige un cliente') + '</select></div>' +
     '<div class="campo"><label class="rb-etiqueta" for="r-person">Funcionario</label><select class="rb-select" id="r-person" name="personId" required>' + opciones(activePeople().map(function (p) { return { value: p.id, label: p.name + ' · ' + ROLE_LABELS[p.role] }; }), '', 'Elige una persona') + '</select></div>' +
-    '<p class="sec">La fila aparece en la cuadrícula; se guarda en cuanto registres horas en alguna semana.</p></form>';
-  return modalShell('Agregar <b>fila</b>', body, '<span class="esp"></span><button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="cerrar-modal">Cancelar</button><button class="rb-btn rb-btn--primario rb-btn--sm" type="submit" form="form-fila">Agregar</button>');
+    '<p class="sec">El cliente queda asignado a la persona de inmediato; las horas se reparten después, semana a semana.</p></form>';
+  return modalShell('Asignar <b>cliente</b>', body, '<span class="esp"></span><button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="cerrar-modal">Cancelar</button><button class="rb-btn rb-btn--primario rb-btn--sm" type="submit" form="form-fila">Asignar</button>');
 }
 
 function modalPersona(m) {
@@ -1042,7 +1061,7 @@ function modalFusionar(m) {
   const p = personById(m.personId);
   if (!p) return '';
   const destinos = sortPeople(S.people.filter(function (x) { return x.id !== p.id && x.active !== false; }))
-    .map(function (x) { return { value: x.id, label: x.name + ' · ' + ROLE_LABELS[x.role] + (x.email ? ' · ' + x.email : ' · sin correo') + (x.dias ? ' · ' + x.dias + ' días con horas' : '') }; });
+    .map(function (x) { return { value: x.id, label: x.name + ' · ' + ROLE_LABELS[x.role] + (x.email ? ' · ' + x.email : ' · sin correo') + (x.clientes ? ' · ' + x.clientes + ' clientes' : '') + (x.dias ? ' · ' + x.dias + ' días con horas' : '') }; });
   const body = '<p style="margin-bottom:12px">Se traspasarán las horas de <b class="az">' + esc(p.name) + '</b>' + (p.dias ? ' (' + p.dias + ' días con horas)' : '') + (p.email ? ', correo ' + esc(p.email) : ', sin correo') + ' a la persona que elijas, y <b>' + esc(p.name) + ' se eliminará</b>.</p>' +
     '<ul class="rb-lista"><li>La persona que queda conserva su correo; si no tenía, toma el de la eliminada.</li><li>Si ambas tenían horas el mismo día para el mismo cliente, se suman.</li><li>Se conserva el rol más alto de las dos.</li></ul>' +
     '<form id="form-fusionar" data-from="' + p.id + '"><div class="campo"><label class="rb-etiqueta" for="f-into">Traspasar a</label><select class="rb-select" id="f-into" name="intoId" required>' + opciones(destinos, '', 'Elige la persona que se conserva') + '</select></div></form>';
@@ -1077,6 +1096,25 @@ async function withBusy(fn) {
   finally { UI.busy = false; }
 }
 
+async function asignarCliente(clientId, personId, msg) {
+  await api('POST', '/api/assignments', { clientId: clientId, personId: personId });
+  if (!isAssigned(clientId, personId)) S.assignments.push({ clientId: clientId, personId: personId });
+  if (msg) toast(msg, 'ok');
+}
+
+async function quitarCliente(clientId, personId) {
+  const c = clientById(clientId), p = personById(personId);
+  const dias = S.budget.filter(function (x) { return x.clientId === clientId && x.personId === personId; }).length;
+  confirmDialog({ title: 'Quitar <b>cliente</b>', danger: true, okLabel: 'Quitar',
+    text: 'Se quitará ' + (c ? c.name : 'el cliente') + ' de ' + (p ? p.name : 'la persona') + (dias ? ' y se borrarán sus ' + dias + ' días con horas en ese cliente.' : '.'),
+    onOk: async function () {
+      await api('DELETE', '/api/assignments?clientId=' + clientId + '&personId=' + personId);
+      S.assignments = S.assignments.filter(function (a) { return !(a.clientId === clientId && a.personId === personId); });
+      S.budget = S.budget.filter(function (x) { return !(x.clientId === clientId && x.personId === personId); });
+      indexBudget(); UI.modal = null; render(); toast('Cliente quitado.', 'ok');
+    } });
+}
+
 /* Guarda los siete días de una semana para un cliente y una persona. */
 async function saveDias(clientId, personId, weekIdx, horas, phase, note, msg) {
   const w = weekByIdx(weekIdx);
@@ -1095,6 +1133,7 @@ async function saveDias(clientId, personId, weekIdx, horas, phase, note, msg) {
     dias.forEach(function (d) { keys[clientId + '|' + personId + '|' + d] = true; });
     S.budget = S.budget.filter(function (x) { return !keys[x.clientId + '|' + x.personId + '|' + x.day]; });
     r.rows.forEach(function (x) { if (!x.deleted) S.budget.push(x); });
+    if (!isAssigned(clientId, personId)) S.assignments.push({ clientId: clientId, personId: personId });
     indexBudget();
     UI.modal = null;
     render();
@@ -1255,6 +1294,7 @@ document.addEventListener('click', function (ev) {
     case 'agregar': UI.modal = { type: 'agregar', personId: Number(el.dataset.p), weekIdx: Number(el.dataset.w) }; render(); break;
     case 'agregar-fila': UI.modal = { type: 'fila' }; render(); break;
     case 'editar-semana': UI.modal = { type: 'semana', idx: Number(el.dataset.w) }; render(); break;
+    case 'quitar-cliente': quitarCliente(Number(el.dataset.c), Number(el.dataset.p)); break;
     case 'dias-vaciar': { const m = UI.modal; saveDias(m.clientId, m.personId, m.weekIdx, [null, null, null, null, null, null, null], null, null, 'Semana retirada.'); break; }
     case 'ver-persona': irASemana(id); break;
     case 'ver-cliente': UI.filtro.persona = 'all'; UI.filtro.cliente = String(id); UI.filtro.sede = 'all'; setView('presupuesto'); break;
@@ -1296,16 +1336,26 @@ document.addEventListener('submit', function (ev) {
       const d = readForm(form);
       const clientId = form.dataset.c ? Number(form.dataset.c) : Number(d.clientId);
       if (!clientId) return;
+      const personId = Number(form.dataset.p), weekIdx = Number(form.dataset.w);
       const horas = [0, 1, 2, 3, 4, 5, 6].map(function (i) { return d['h' + i] === '' || d['h' + i] === undefined ? null : Number(d['h' + i]); });
-      saveDias(clientId, Number(form.dataset.p), Number(form.dataset.w), horas, d.phase || null, d.note || null, form.dataset.c ? 'Horas guardadas.' : 'Cliente asignado.');
+      const hayHoras = horas.some(function (h) { return h != null; }) || d.phase === 'vacaciones';
+      if (!form.dataset.c && !hayHoras) {
+        // Solo la asignación, sin horas.
+        withBusy(async function () { await asignarCliente(clientId, personId, 'Cliente asignado.'); UI.modal = null; render(); });
+        break;
+      }
+      if (!form.dataset.c) asignarCliente(clientId, personId, null).catch(function () { /* saveDias también asigna */ });
+      saveDias(clientId, personId, weekIdx, horas, d.phase || null, d.note || null, form.dataset.c ? 'Horas guardadas.' : 'Cliente asignado.');
       break;
     }
     case 'form-fila': {
       const d = readForm(form);
       if (!d.clientId || !d.personId) return;
-      UI.filasExtra.push({ clientId: Number(d.clientId), personId: Number(d.personId) });
-      UI.filtro.persona = 'all'; UI.filtro.cliente = 'all'; UI.filtro.sede = 'all';
-      UI.modal = null; render();
+      withBusy(async function () {
+        await asignarCliente(Number(d.clientId), Number(d.personId), 'Cliente asignado.');
+        UI.filtro.persona = 'all'; UI.filtro.cliente = 'all'; UI.filtro.sede = 'all';
+        UI.modal = null; render();
+      });
       break;
     }
     case 'form-semana': {

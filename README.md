@@ -6,6 +6,10 @@ de la app, con el diseño de marca de Russell Bedford.
 
 - Los clientes se agrupan por **sede** (Barranquilla o Santa Marta); la sede se
   edita en Clientes.
+- **Asignar un cliente a una persona es independiente de las horas**: la
+  asignación existe por sí misma (botón "Asignar cliente" en Semana o en
+  Presupuesto) y después, semana a semana, se reparten las horas por día.
+  Quitar el cliente borra también las horas que tuviera con él.
 - La asignación es **por día**: en cada semana se reparten las horas de un
   cliente entre lunes y domingo. Sábados, domingos y festivos de Colombia van
   resaltados en el tablero y cada semana conserva su número (semana ISO).
@@ -160,7 +164,8 @@ todos los colores de esos tokens.
 | `api/auth.js` | Sesión: configuración inicial, entrar, salir, cambiar contraseña. |
 | `api/people.js` | Personas y roles (gerente). |
 | `api/clients.js` | Clientes. |
-| `api/budget.js` | Horas por cliente, persona y semana; filtra por rol. |
+| `api/assignments.js` | Qué clientes tiene cada persona (sin depender de las horas). |
+| `api/budget.js` | Horas por cliente, persona y día; filtra por rol. |
 | `api/_lib/store.js` | Acceso a Postgres (Neon o PGlite), esquema y carga del presupuesto. |
 | `api/_lib/auth.js` | Contraseñas (scrypt), sesiones (cookie HttpOnly) y comprobación de rol. |
 | `server.js` | Servidor HTTP (producción con `npm start`, desarrollo con `npm run dev`). |

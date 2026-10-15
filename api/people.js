@@ -27,12 +27,13 @@ module.exports = async function handler(req, res) {
       if (!user) return;
       const rows = await sql`
         select p.id, p.name, p.email, p.role, p.active, p.password_hash, p.must_change_password, p.created_at,
-               (select count(*)::int from budget_days b where b.person_id = p.id) as dias
+               (select count(*)::int from budget_days b where b.person_id = p.id) as dias,
+               (select count(*)::int from assignments a where a.person_id = p.id) as clientes
           from people p
          order by case p.role when 'gerente' then 0 when 'senior' then 1 else 2 end, p.name`;
       if (auth.canManage(user)) {
         return res.status(200).json({
-          people: rows.map(function (r) { const p = auth.publicPerson(r); p.dias = Number(r.dias) || 0; return p; })
+          people: rows.map(function (r) { const p = auth.publicPerson(r); p.dias = Number(r.dias) || 0; p.clientes = Number(r.clientes) || 0; return p; })
         });
       }
       // Junior: nombres para mostrar quién creó o comentó una tarea; nada más.
@@ -70,6 +71,10 @@ module.exports = async function handler(req, res) {
         await sql`delete from budget_days where id = ${c.sid}`;
       }
       const movidas = await sql`update budget_days set person_id = ${intoId} where person_id = ${fromId} returning id`;
+      await sql`
+        insert into assignments (client_id, person_id)
+        select client_id, ${intoId} from assignments where person_id = ${fromId}
+        on conflict do nothing`;
 
       // Datos de cuenta: el destino toma el correo si no tenía, y el rol más alto.
       const rango = { gerente: 3, senior: 2, junior: 1 };

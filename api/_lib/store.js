@@ -179,6 +179,14 @@ async function ensureSchema(sql) {
       unique (client_id, person_id, day)
     )`;
   await sql`create index if not exists ix_budget_days_person_day on budget_days (person_id, day)`;
+  // Qué clientes tiene cada persona, exista o no horas: es la asignación en sí.
+  await sql`
+    create table if not exists assignments (
+      client_id integer not null references clients(id) on delete cascade,
+      person_id integer not null references people(id) on delete cascade,
+      created_at timestamptz not null default now(),
+      primary key (client_id, person_id)
+    )`;
   await sql`
     create table if not exists meta (
       key   text primary key,
@@ -193,7 +201,17 @@ async function ensureSchema(sql) {
     $$`;
 
   await migrateWeeklyToDays(sql);
+  await syncAssignments(sql);
   schemaReady = true;
+}
+
+/* Toda pareja cliente-persona con horas queda también como asignación (los
+   datos anteriores a esta tabla y cualquier hora guardada sin asignar). */
+async function syncAssignments(sql) {
+  await sql`
+    insert into assignments (client_id, person_id)
+    select distinct client_id, person_id from budget_days
+    on conflict do nothing`;
 }
 
 /* ---------- semanas y días ---------- */
@@ -330,6 +348,7 @@ async function seedBudget(sql, data) {
     }
     created.budget++;
   }
+  await syncAssignments(sql);
   // El archivo ya fue aplicado: la migración desde la tabla semanal no debe repetirlo.
   await sql`insert into meta (key, value) values ('budget_days_migrated', ${new Date().toISOString()}) on conflict (key) do nothing`;
   return created;
@@ -386,6 +405,7 @@ module.exports = {
   addDays,
   workingDays,
   splitHours,
+  syncAssignments,
   MISSING_DB_MESSAGE,
   connectionString,
   getSql,
