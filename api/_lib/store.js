@@ -187,6 +187,25 @@ async function ensureSchema(sql) {
       created_at timestamptz not null default now(),
       primary key (client_id, person_id)
     )`;
+  // Tableros: grupos de personas y clientes para ver y asignar aparte.
+  await sql`
+    create table if not exists boards (
+      id         serial primary key,
+      name       text not null unique,
+      created_at timestamptz not null default now()
+    )`;
+  await sql`
+    create table if not exists board_people (
+      board_id  integer not null references boards(id) on delete cascade,
+      person_id integer not null references people(id) on delete cascade,
+      primary key (board_id, person_id)
+    )`;
+  await sql`
+    create table if not exists board_clients (
+      board_id  integer not null references boards(id) on delete cascade,
+      client_id integer not null references clients(id) on delete cascade,
+      primary key (board_id, client_id)
+    )`;
   await sql`
     create table if not exists meta (
       key   text primary key,

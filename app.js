@@ -12,9 +12,10 @@
    dibujar con render() tras cada cambio.
    ========================================================================= */
 
-const S = { user: null, setupRequired: false, dominio: 'rbcol.co', msClientId: null, msTenantId: null, people: [], clients: [], sedes: ['Barranquilla', 'Santa Marta'], weeks: [], holidays: {}, capacity: 42, budget: [], assignments: [], loaded: false };
+const S = { user: null, setupRequired: false, dominio: 'rbcol.co', msClientId: null, msTenantId: null, people: [], clients: [], sedes: ['Barranquilla', 'Santa Marta'], weeks: [], holidays: {}, capacity: 42, budget: [], assignments: [], boards: [], loaded: false };
 const UI = {
   view: null,
+  boardId: 'general',
   weekIdx: null,
   filtro: { persona: 'all', cliente: 'all', mes: 'all', sede: 'all' },
   modal: null,
@@ -46,7 +47,8 @@ const ICON = {
   logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M13 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg>',
   warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L2.5 17.5A2 2 0 0 0 4.2 20.5h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>',
   merge: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v6a4 4 0 0 0 4 4h4"/><path d="M18 4v16"/><path d="M11 11l3 3-3 3"/></svg>',
-  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg>'
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg>',
+  board: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg>'
 };
 const DIAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 const DIAS_LARGO = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -98,7 +100,7 @@ function sortPeople(list) {
 function activePeople() { return sortPeople(S.people.filter(function (p) { return p.active !== false; })); }
 function teamPeople() {
   // Quienes reciben horas: todo el equipo activo salvo gerentes sin presupuesto.
-  return activePeople().filter(function (p) { return p.role !== 'gerente' || S.assignments.some(function (a) { return a.personId === p.id; }); });
+  return activePeople().filter(function (p) { return inBoardPerson(p.id) && (p.role !== 'gerente' || S.assignments.some(function (a) { return a.personId === p.id; }) || currentBoard()); });
 }
 function currentWeekIdx() {
   const t = todayISO();
@@ -179,6 +181,21 @@ function sobrecargados(weekIdx, people) {
   return people.filter(function (p) { return hoursOf(p.id, weekIdx) > w.capacity; });
 }
 function sedeLabel(sede) { return sede || 'Sin sede'; }
+
+/* ---- tableros ---- */
+function currentBoard() {
+  if (UI.boardId === 'general') return null;
+  return S.boards.find(function (b) { return b.id === Number(UI.boardId); }) || null;
+}
+function inBoardPerson(id) { const b = currentBoard(); return !b || b.people.indexOf(id) !== -1; }
+function inBoardClient(id) { const b = currentBoard(); return !b || b.clients.indexOf(id) !== -1; }
+function boardName() { const b = currentBoard(); return b ? b.name : 'General'; }
+function boardNote() { const b = currentBoard(); return b ? 'Tablero ' + esc(b.name) + ' · ' : ''; }
+function rememberBoard() { try { localStorage.setItem('rb_tablero', String(UI.boardId)); } catch (e) { /* nada */ } }
+function restoreBoard() {
+  try { const v = localStorage.getItem('rb_tablero'); if (v) UI.boardId = v === 'general' ? 'general' : Number(v); } catch (e) { /* nada */ }
+  if (UI.boardId !== 'general' && !currentBoard()) UI.boardId = 'general';
+}
 function isAssigned(clientId, personId) { return S.assignments.some(function (a) { return a.clientId === clientId && a.personId === personId; }); }
 function clientsOf(personId) { return S.assignments.filter(function (a) { return a.personId === personId; }).map(function (a) { return a.clientId; }); }
 function peopleOf(clientId) { return S.assignments.filter(function (a) { return a.clientId === clientId; }).map(function (a) { return a.personId; }); }
@@ -239,8 +256,10 @@ async function api(method, url, body) {
 }
 
 async function loadAll() {
-  const results = await Promise.all([api('GET', '/api/people'), api('GET', '/api/clients'), api('GET', '/api/budget'), api('GET', '/api/assignments')]);
+  const results = await Promise.all([api('GET', '/api/people'), api('GET', '/api/clients'), api('GET', '/api/budget'), api('GET', '/api/assignments'), api('GET', '/api/boards')]);
   S.assignments = results[3].assignments;
+  S.boards = results[4].boards;
+  restoreBoard();
   S.people = results[0].people;
   S.clients = results[1].clients;
   S.sedes = results[1].sedes || S.sedes;
@@ -414,7 +433,8 @@ function navItems() {
       { id: 'semana', label: 'Semana' },
       { id: 'presupuesto', label: 'Presupuesto' },
       { id: 'equipo', label: 'Equipo' },
-      { id: 'clientes', label: 'Clientes' }
+      { id: 'clientes', label: 'Clientes' },
+      { id: 'tableros', label: 'Tableros' }
     ];
     if (isGerente()) items.push({ id: 'personas', label: 'Personas' });
     items.push({ id: 'ajustes', label: 'Ajustes' });
@@ -510,7 +530,11 @@ function renderHeader() {
   const nav = navItems().map(function (n) {
     return '<button class="' + (UI.view === n.id ? 'activo' : '') + '" data-act="nav" data-view="' + n.id + '">' + esc(n.label) + '</button>';
   }).join('');
-  return '<header class="rb-header">' + logo() + '<nav class="nav">' + nav + '</nav>' +
+  const tableros = '<label class="tablero-sel" title="Tablero: acota las pantallas a un grupo de personas y clientes">' + ICON.board +
+    '<select class="rb-select" data-act-change="tablero"><option value="general"' + (UI.boardId === 'general' ? ' selected' : '') + '>General</option>' +
+    S.boards.map(function (b) { return '<option value="' + b.id + '"' + (String(UI.boardId) === String(b.id) ? ' selected' : '') + '>' + esc(b.name) + '</option>'; }).join('') +
+    '</select></label>';
+  return '<header class="rb-header">' + logo() + '<nav class="nav">' + nav + '</nav>' + tableros +
     '<div class="usuario"><div class="avatar">' + esc(initials(S.user.name)) + '</div>' +
     '<div><div class="nombre">' + esc(S.user.name) + '</div><div class="rol">' + ROLE_LABELS[S.user.role] + '</div></div>' +
     '<button class="icono-btn" data-act="logout" title="Cerrar sesión">' + ICON.logout + '</button></div></header>';
@@ -530,6 +554,7 @@ function renderView() {
     case 'equipo': return renderEquipo();
     case 'clientes': return renderClientes();
     case 'personas': return renderPersonas();
+    case 'tableros': return renderTableros();
     case 'ajustes': return renderAjustes();
     default: return '';
   }
@@ -598,8 +623,8 @@ function renderSemana(mine) {
 
   const cards = people.map(function (p) {
     const mias = {};
-    clientsOf(p.id).forEach(function (cid) { mias[cid] = 0; });
-    filas.forEach(function (r) { if (r.personId === p.id) mias[r.clientId] = (mias[r.clientId] || 0) + (r.hours || 0); });
+    clientsOf(p.id).forEach(function (cid) { if (inBoardClient(cid)) mias[cid] = 0; });
+    filas.forEach(function (r) { if (r.personId === p.id && inBoardClient(r.clientId)) mias[r.clientId] = (mias[r.clientId] || 0) + (r.hours || 0); });
     const clientes = Object.keys(mias).map(Number).sort(function (a, b) {
       const ca = clientById(a), cb = clientById(b);
       return (mias[b] - mias[a]) || sedeOrden(ca && ca.sede) - sedeOrden(cb && cb.sede) || ((ca ? ca.name : '').localeCompare(cb ? cb.name : ''));
@@ -641,7 +666,7 @@ function renderSemana(mine) {
   const sub = esc(weekTag(w)) + ' · ' + esc(w.label.toLowerCase()) + ' de ' + esc(w.month.toLowerCase()) + ' · cargabilidad ' + fmtH(w.capacity) + ' h por persona' +
     (festivos.length ? ' · festivo: ' + festivos.map(function (d) { return esc(DIAS_LARGO[dow(d)].toLowerCase() + ' ' + fmtDate(d)); }).join(', ') : '') +
     (editable ? '. Haz clic en una línea para repartir las horas por día.' : '.');
-  return titulo(mine ? 'Mi <b>semana</b>' : 'Asignación <b>semanal</b>', sub, selectorSemana()) + kpis + alerta +
+  return titulo(mine ? 'Mi <b>semana</b>' : 'Asignación <b>semanal</b>', boardNote() + sub, selectorSemana()) + kpis + alerta +
     '<div class="personas-semana">' + cards + '</div>' + leyendaFases();
 }
 
@@ -721,13 +746,14 @@ function renderPresupuesto(mine) {
     if (UI.filtro.cliente !== 'all') rows = rows.filter(function (r) { return String(r.clientId) === UI.filtro.cliente; });
   }
   if (UI.filtro.sede !== 'all') rows = rows.filter(function (r) { return UI.filtro.sede === 'none' ? !r.client.sede : r.client.sede === UI.filtro.sede; });
+  rows = rows.filter(function (r) { return inBoardPerson(r.personId) && inBoardClient(r.clientId); });
   const semanas = visibleWeeks();
   const personas = mine ? [personById(S.user.id) || S.user] : teamPeople();
   const filtros = '<div class="filtros">' + selectorMes() +
     '<select class="rb-select" data-filtro="sede"><option value="all">Todas las sedes</option>' + S.sedes.map(function (x) { return '<option value="' + esc(x) + '"' + (UI.filtro.sede === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '<option value="none"' + (UI.filtro.sede === 'none' ? ' selected' : '') + '>Sin sede</option></select>' +
     (mine ? '' :
-    '<select class="rb-select" data-filtro="persona"><option value="all">Todas las personas</option>' + activePeople().map(function (p) { return '<option value="' + p.id + '"' + (UI.filtro.persona === String(p.id) ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('') + '</select>' +
-    '<select class="rb-select" data-filtro="cliente"><option value="all">Todos los clientes</option>' + S.clients.map(function (c) { return '<option value="' + c.id + '"' + (UI.filtro.cliente === String(c.id) ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</select>' +
+    '<select class="rb-select" data-filtro="persona"><option value="all">Todas las personas</option>' + activePeople().filter(function (p) { return inBoardPerson(p.id); }).map(function (p) { return '<option value="' + p.id + '"' + (UI.filtro.persona === String(p.id) ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('') + '</select>' +
+    '<select class="rb-select" data-filtro="cliente"><option value="all">Todos los clientes</option>' + S.clients.filter(function (c) { return inBoardClient(c.id); }).map(function (c) { return '<option value="' + c.id + '"' + (UI.filtro.cliente === String(c.id) ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</select>' +
     (editable ? '<button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="agregar-fila">' + ICON.plus + 'Asignar cliente</button>' : '')) +
     '</div>';
 
@@ -777,7 +803,7 @@ function renderPresupuesto(mine) {
   }
   const sub = (mine ? 'Tus horas por cliente y día. ' : 'Horas por cliente, funcionario y día, agrupadas por sede. ') + esc(rangoCalendario()) + '.' +
     (editable ? ' Haz clic en un día para repartir la semana' + (isGerente() ? ' o en el encabezado de una semana para ajustar su cargabilidad.' : '.') : '');
-  return titulo(mine ? 'Mi <b>presupuesto</b>' : 'Presupuesto <b>por días</b>', sub) + filtros + grid + leyendaFases();
+  return titulo(mine ? 'Mi <b>presupuesto</b>' : 'Presupuesto <b>por días</b>', boardNote() + sub) + filtros + grid + leyendaFases();
 }
 
 /* ============================ Equipo ============================ */
@@ -786,7 +812,7 @@ function renderEquipo() {
   const cur = currentWeekIdx();
   const w = weekByIdx(cur);
   // El equipo que recibe horas: gerentes solo si tienen presupuesto.
-  const people = sortPeople(S.people).filter(function (p) { return p.role !== 'gerente' || S.assignments.some(function (a) { return a.personId === p.id; }); });
+  const people = sortPeople(S.people).filter(function (p) { return inBoardPerson(p.id) && (p.role !== 'gerente' || S.assignments.some(function (a) { return a.personId === p.id; }) || currentBoard()); });
   const cards = people.map(function (p) {
     const clientes = {};
     let total = 0;
@@ -801,7 +827,7 @@ function renderEquipo() {
       '<span>' + Object.keys(clientes).length + ' clientes</span><span class="num">' + fmtH(total) + ' h en el periodo</span></div></div></div>';
   }).join('');
   const conPresupuesto = people.filter(function (p) { return p.active !== false; });
-  return titulo('Carga del <b>equipo</b>', 'Horas asignadas por semana frente a la cargabilidad. Haz clic en una persona para ver su semana.') +
+  return titulo('Carga del <b>equipo</b>', boardNote() + 'Horas asignadas por semana frente a la cargabilidad. Haz clic en una persona para ver su semana.') +
     '<div class="equipo-grid">' + cards + '</div>' +
     '<h2 style="margin-bottom:4px">Mapa de carga semanal</h2><p class="sec" style="margin-bottom:12px">Suma de horas por semana. Naranja: por encima de las ' + fmtH(S.capacity) + ' h de cargabilidad.</p>' +
     '<div class="filtros">' + selectorMes() + '</div>' +
@@ -834,6 +860,7 @@ function renderClientes() {
   const cur = currentWeekIdx();
   let lista = S.clients.slice().sort(function (a, b) { return (a.active === false) - (b.active === false) || sedeOrden(a.sede) - sedeOrden(b.sede) || a.name.localeCompare(b.name); });
   if (UI.filtro.sede !== 'all') lista = lista.filter(function (c) { return UI.filtro.sede === 'none' ? !c.sede : c.sede === UI.filtro.sede; });
+  lista = lista.filter(function (c) { return inBoardClient(c.id); });
   const rows = lista.map(function (c) {
     const team = {};
     let total = 0, semana = 0;
@@ -855,7 +882,7 @@ function renderClientes() {
     S.sedes.map(function (x) { return '<option value="' + esc(x) + '"' + (UI.filtro.sede === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
     '<option value="none"' + (UI.filtro.sede === 'none' ? ' selected' : '') + '>Sin sede</option></select></div>';
   const sinSede = S.clients.filter(function (c) { return !c.sede && c.active !== false; }).length;
-  return titulo('<b>Clientes</b>', S.clients.length + ' clientes · ' + S.sedes.join(' y ') + (sinSede ? ' · ' + sinSede + ' sin sede asignada' : ''), isManager() ? '<button class="rb-btn rb-btn--primario rb-btn--sm" data-act="nuevo-cliente">' + ICON.plus + 'Nuevo cliente</button>' : '') +
+  return titulo('<b>Clientes</b>', boardNote() + lista.length + ' clientes · ' + S.sedes.join(' y ') + (sinSede ? ' · ' + sinSede + ' sin sede asignada' : ''), isManager() ? '<button class="rb-btn rb-btn--primario rb-btn--sm" data-act="nuevo-cliente">' + ICON.plus + 'Nuevo cliente</button>' : '') +
     filtros +
     '<div class="tabla-wrap"><table class="rb-tabla"><thead><tr><th>Cliente</th><th>Sede</th><th>Equipo asignado</th><th class="num">Horas esta semana</th><th class="num">Horas del periodo</th><th></th></tr></thead><tbody>' +
     (rows || '<tr><td colspan="6" class="sec" style="text-align:center;padding:30px">Sin clientes.</td></tr>') + '</tbody></table></div>';
@@ -892,6 +919,52 @@ function renderPersonas() {
     '<p class="sec" style="margin-top:6px">¿Una persona quedó repetida (una con las horas del Excel y otra creada al entrar con Microsoft)? Usa <b>Fusionar</b> en la repetida y elige a cuál cuenta traspasar sus horas; la repetida se elimina y la que queda conserva correo y horas.</p>';
 }
 
+/* ============================ Tableros ============================ */
+
+function renderTableros() {
+  const cards = S.boards.map(function (b) {
+    const personas = b.people.map(personById).filter(Boolean);
+    const clientes = b.clients.map(clientById).filter(Boolean);
+    return '<div class="rb-tarjeta tablero-card' + (String(UI.boardId) === String(b.id) ? ' activo' : '') + '">' +
+      '<div class="persona-head"><div class="avatar azul">' + ICON.board + '</div><div style="min-width:0;flex:1"><div class="nombre">' + esc(b.name) + '</div>' +
+      '<div class="meta">' + personas.length + ' persona' + (personas.length === 1 ? '' : 's') + ' · ' + clientes.length + ' cliente' + (clientes.length === 1 ? '' : 's') + '</div></div>' +
+      '<div class="acciones"><button class="icono-btn" data-act="editar-tablero" data-id="' + b.id + '" title="Editar">' + ICON.edit + '</button>' +
+      '<button class="icono-btn peligro" data-act="eliminar-tablero" data-id="' + b.id + '" title="Eliminar">' + ICON.trash + '</button></div></div>' +
+      '<div class="tablero-lista"><span class="rb-etiqueta">Personas</span>' + (personas.length ? sortPeople(personas).map(function (p) { return '<span class="persona"><span class="avatar sm ' + (p.role === 'junior' ? 'gris' : '') + '">' + esc(initials(p.name)) + '</span>' + esc(p.name) + '</span>'; }).join('') : '<span class="sec">Ninguna</span>') + '</div>' +
+      '<div class="tablero-lista"><span class="rb-etiqueta">Clientes</span>' + (clientes.length ? clientes.sort(function (a, c) { return sedeOrden(a.sede) - sedeOrden(c.sede) || a.name.localeCompare(c.name); }).map(function (c) { return '<span class="ph ph-none">' + esc(c.name) + (c.sede ? ' <span class="sec">· ' + esc(c.sede) + '</span>' : '') + '</span>'; }).join(' ') : '<span class="sec">Ninguno</span>') + '</div>' +
+      '<button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="abrir-tablero" data-id="' + b.id + '">Abrir este tablero</button>' +
+      '</div>';
+  }).join('');
+  return titulo('<b>Tableros</b>', 'Un tablero agrupa personas y clientes para verlos y asignarlos aparte. El tablero General siempre muestra todo. Elige el tablero activo en el selector de la cabecera.',
+    '<button class="rb-btn rb-btn--primario rb-btn--sm" data-act="nuevo-tablero">' + ICON.plus + 'Nuevo tablero</button>') +
+    '<div class="rb-tarjeta tablero-card' + (UI.boardId === 'general' ? ' activo' : '') + '" style="margin-bottom:16px"><div class="persona-head"><div class="avatar">' + ICON.board + '</div><div style="flex:1"><div class="nombre">General</div><div class="meta">Todas las personas y todos los clientes. No se edita.</div></div>' +
+    (UI.boardId === 'general' ? '<span class="estado ok">Activo</span>' : '<button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="abrir-tablero" data-id="general">Abrir</button>') + '</div></div>' +
+    (cards ? '<div class="personas-semana">' + cards + '</div>' : '<div class="vacio"><h3>Aún no hay tableros</h3><p>Crea uno para agrupar a un equipo con sus clientes.</p></div>');
+}
+
+function modalTablero(m) {
+  const b = m.board || { name: '', people: [], clients: [] };
+  const isNew = !m.board;
+  const personas = activePeople().map(function (p) {
+    return '<label class="check"><input type="checkbox" name="p' + p.id + '"' + (b.people.indexOf(p.id) !== -1 ? ' checked' : '') + '> ' + esc(p.name) + ' <span class="sec">' + ROLE_LABELS[p.role] + '</span></label>';
+  }).join('');
+  let lastSede = '__';
+  const clientes = S.clients.filter(function (c) { return c.active !== false || b.clients.indexOf(c.id) !== -1; })
+    .sort(function (a, c) { return sedeOrden(a.sede) - sedeOrden(c.sede) || a.name.localeCompare(c.name); })
+    .map(function (c) {
+      let out = '';
+      if ((c.sede || null) !== lastSede) { out += '<div class="rb-etiqueta" style="margin-top:8px">' + esc(sedeLabel(c.sede)) + '</div>'; lastSede = c.sede || null; }
+      return out + '<label class="check"><input type="checkbox" name="c' + c.id + '"' + (b.clients.indexOf(c.id) !== -1 ? ' checked' : '') + '> ' + esc(c.name) + '</label>';
+    }).join('');
+  const body = '<form id="form-tablero" data-id="' + (b.id || '') + '">' +
+    '<div class="campo"><label class="rb-etiqueta" for="t-name">Nombre del tablero</label><input class="rb-input" id="t-name" type="text" name="name" required maxlength="80" value="' + esc(b.name) + '" placeholder="Ej. Auditoría Santa Marta"></div>' +
+    '<div class="tablero-cols"><div><span class="rb-etiqueta">Personas</span><div class="lista-check">' + personas + '</div></div>' +
+    '<div><span class="rb-etiqueta">Clientes</span><div class="lista-check">' + clientes + '</div></div></div>' +
+    '</form>';
+  return modalShell(isNew ? 'Nuevo <b>tablero</b>' : 'Editar <b>tablero</b>', body,
+    '<span class="esp"></span><button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="cerrar-modal">Cancelar</button><button class="rb-btn rb-btn--primario rb-btn--sm" type="submit" form="form-tablero">' + (isNew ? 'Crear' : 'Guardar') + '</button>', { ancho: true });
+}
+
 /* ============================ Ajustes ============================ */
 
 function renderAjustes() {
@@ -926,6 +999,7 @@ function renderModal() {
     case 'password': inner = modalPassword(m); break;
     case 'semana': inner = modalSemana(m); break;
     case 'fusionar': inner = modalFusionar(m); break;
+    case 'tablero': inner = modalTablero(m); break;
     case 'confirm': inner = modalConfirm(m); break;
     default: return '';
   }
@@ -980,7 +1054,7 @@ function modalAgregar(m) {
   const p = personById(m.personId), w = weekByIdx(m.weekIdx);
   const ya = {};
   clientsOf(m.personId).forEach(function (cid) { ya[cid] = true; });
-  const clientes = S.clients.filter(function (c) { return c.active !== false && !ya[c.id]; })
+  const clientes = S.clients.filter(function (c) { return c.active !== false && !ya[c.id] && inBoardClient(c.id); })
     .sort(function (a, b) { return sedeOrden(a.sede) - sedeOrden(b.sede) || a.name.localeCompare(b.name); })
     .map(function (c) { return { value: c.id, label: (c.sede ? c.sede + ' · ' : '') + c.name }; });
   const body = '<p class="sec" style="margin-bottom:14px"><b class="az">' + esc(p ? p.name : '') + '</b> · ' + esc(weekTag(w) + ', ' + weekTitle(w)) + ' · ya tiene ' + fmtH(hoursOf(m.personId, m.weekIdx)) + ' de ' + (w ? fmtH(w.capacity) : '') + ' h.</p>' +
@@ -993,8 +1067,8 @@ function modalAgregar(m) {
 
 function modalFila() {
   const body = '<form id="form-fila">' +
-    '<div class="campo"><label class="rb-etiqueta" for="r-client">Cliente</label><select class="rb-select" id="r-client" name="clientId" required>' + opciones(S.clients.filter(function (c) { return c.active !== false; }).map(function (c) { return { value: c.id, label: c.name }; }), '', 'Elige un cliente') + '</select></div>' +
-    '<div class="campo"><label class="rb-etiqueta" for="r-person">Funcionario</label><select class="rb-select" id="r-person" name="personId" required>' + opciones(activePeople().map(function (p) { return { value: p.id, label: p.name + ' · ' + ROLE_LABELS[p.role] }; }), '', 'Elige una persona') + '</select></div>' +
+    '<div class="campo"><label class="rb-etiqueta" for="r-client">Cliente</label><select class="rb-select" id="r-client" name="clientId" required>' + opciones(S.clients.filter(function (c) { return c.active !== false && inBoardClient(c.id); }).map(function (c) { return { value: c.id, label: (c.sede ? c.sede + ' · ' : '') + c.name }; }), '', 'Elige un cliente') + '</select></div>' +
+    '<div class="campo"><label class="rb-etiqueta" for="r-person">Funcionario</label><select class="rb-select" id="r-person" name="personId" required>' + opciones(activePeople().filter(function (p) { return inBoardPerson(p.id); }).map(function (p) { return { value: p.id, label: p.name + ' · ' + ROLE_LABELS[p.role] }; }), '', 'Elige una persona') + '</select></div>' +
     '<p class="sec">El cliente queda asignado a la persona de inmediato; las horas se reparten después, semana a semana.</p></form>';
   return modalShell('Asignar <b>cliente</b>', body, '<span class="esp"></span><button class="rb-btn rb-btn--secundario rb-btn--sm" data-act="cerrar-modal">Cancelar</button><button class="rb-btn rb-btn--primario rb-btn--sm" type="submit" form="form-fila">Asignar</button>');
 }
@@ -1298,6 +1372,21 @@ document.addEventListener('click', function (ev) {
     case 'dias-vaciar': { const m = UI.modal; saveDias(m.clientId, m.personId, m.weekIdx, [null, null, null, null, null, null, null], null, null, 'Semana retirada.'); break; }
     case 'ver-persona': irASemana(id); break;
     case 'ver-cliente': UI.filtro.persona = 'all'; UI.filtro.cliente = String(id); UI.filtro.sede = 'all'; setView('presupuesto'); break;
+    case 'nuevo-tablero': UI.modal = { type: 'tablero', board: null }; render(); break;
+    case 'editar-tablero': UI.modal = { type: 'tablero', board: S.boards.find(function (b) { return b.id === id; }) }; render(); break;
+    case 'abrir-tablero': UI.boardId = el.dataset.id === 'general' ? 'general' : id; rememberBoard(); UI.filtro.persona = 'all'; UI.filtro.cliente = 'all'; setView('semana'); break;
+    case 'eliminar-tablero': {
+      const b = S.boards.find(function (x) { return x.id === id; });
+      if (!b) break;
+      confirmDialog({ title: 'Eliminar <b>tablero</b>', danger: true, okLabel: 'Eliminar',
+        text: 'Se eliminará el tablero ' + b.name + '. Las personas, los clientes y las horas no se tocan: solo desaparece la agrupación.',
+        onOk: async function () {
+          const r = await api('DELETE', '/api/boards?id=' + id);
+          S.boards = r.boards; if (String(UI.boardId) === String(id)) { UI.boardId = 'general'; rememberBoard(); }
+          UI.modal = null; render(); toast('Tablero eliminado.', 'ok');
+        } });
+      break;
+    }
     case 'nueva-persona': UI.modal = { type: 'persona', person: null }; render(); break;
     case 'editar-persona': UI.modal = { type: 'persona', person: personById(id) }; render(); break;
     case 'clave-persona': UI.modal = { type: 'setpw', personId: id }; render(); break;
@@ -1386,6 +1475,20 @@ document.addEventListener('submit', function (ev) {
       });
       break;
     }
+    case 'form-tablero': {
+      const d = readForm(form);
+      const people = [], clients = [];
+      Object.keys(d).forEach(function (k) { if (d[k] === true) { if (k[0] === 'p') people.push(Number(k.slice(1))); else if (k[0] === 'c') clients.push(Number(k.slice(1))); } });
+      const id = form.dataset.id ? Number(form.dataset.id) : null;
+      withBusy(async function () {
+        const r = id ? await api('PATCH', '/api/boards?id=' + id, { name: d.name, people: people, clients: clients })
+                     : await api('POST', '/api/boards', { name: d.name, people: people, clients: clients });
+        S.boards = r.boards;
+        if (!id) { UI.boardId = r.board.id; rememberBoard(); }
+        UI.modal = null; render(); toast(id ? 'Tablero guardado.' : 'Tablero creado y abierto.', 'ok');
+      });
+      break;
+    }
     case 'form-persona': submitPersona(form); break;
     case 'form-setpw': submitSetPassword(form); break;
     case 'form-cliente': submitCliente(form); break;
@@ -1396,6 +1499,7 @@ document.addEventListener('submit', function (ev) {
 document.addEventListener('change', function (ev) {
   const el = ev.target;
   if (el.dataset.actChange === 'semana') { UI.weekIdx = Number(el.value); render(); return; }
+  if (el.dataset.actChange === 'tablero') { UI.boardId = el.value === 'general' ? 'general' : Number(el.value); rememberBoard(); UI.filtro.persona = 'all'; UI.filtro.cliente = 'all'; render(); return; }
   if (el.dataset.filtro) { UI.filtro[el.dataset.filtro] = el.value; render(); }
 });
 

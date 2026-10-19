@@ -57,6 +57,11 @@ horas de otras personas, haga lo que haga el navegador.
 - **Presupuesto**: tablero por días (cliente × funcionario × día) agrupado por sede, con el número de semana y su etiqueta, las fases por color, fines de semana y festivos resaltados y un total por semana que se pone en naranja cuando la persona supera la cargabilidad. Filtros por mes, sede, persona y cliente.
 - **Equipo**: tarjetas por persona y mapa de carga semanal (naranja = por encima de la cargabilidad).
 - **Clientes**: equipo asignado, horas de la semana y del periodo.
+- **Tableros**: un tablero agrupa personas y clientes para verlos y asignarlos
+  aparte (por ejemplo, el equipo de una sede o de un grupo de encargos). El
+  tablero **General** siempre muestra todo. El selector de la cabecera cambia
+  el tablero activo y todas las pantallas se acotan a sus personas y clientes;
+  la asignación cliente–persona y las horas son las mismas en todos.
 - **Personas** (solo gerente): crear personas, cambiar rol, dar acceso con una contraseña temporal, desactivar cuentas.
 - **Ajustes**: cambiar la propia contraseña; el gerente puede recargar el presupuesto base.
 - **Mi semana / Mi presupuesto** (junior): sus horas por cliente, en la semana elegida y en todo el periodo.
@@ -165,6 +170,7 @@ todos los colores de esos tokens.
 | `api/people.js` | Personas y roles (gerente). |
 | `api/clients.js` | Clientes. |
 | `api/assignments.js` | Qué clientes tiene cada persona (sin depender de las horas). |
+| `api/boards.js` | Tableros: grupos de personas y clientes. |
 | `api/budget.js` | Horas por cliente, persona y día; filtra por rol. |
 | `api/_lib/store.js` | Acceso a Postgres (Neon o PGlite), esquema y carga del presupuesto. |
 | `api/_lib/auth.js` | Contraseñas (scrypt), sesiones (cookie HttpOnly) y comprobación de rol. |

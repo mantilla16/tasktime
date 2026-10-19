@@ -226,6 +226,34 @@ async function waitForServer() {
     r = await gerente('GET', '/api/assignments');
     assert.ok(!r.body.assignments.some(function (a) { return a.personId === roberto.id && a.clientId === kaia.id; }));
 
+    /* ---- tableros ---- */
+    r = await junior('POST', '/api/boards', { name: 'Mío', people: [paula.id], clients: [kaia.id] });
+    assert.strictEqual(r.status, 403, 'el junior no crea tableros');
+    r = await senior('POST', '/api/boards', { name: 'General', people: [], clients: [] });
+    assert.strictEqual(r.status, 400, '"General" está reservado');
+    r = await senior('POST', '/api/boards', { name: 'Auditoría Santa Marta', people: [paula.id, roberto.id], clients: [kaia.id, nuevo.id] });
+    assert.strictEqual(r.status, 201, JSON.stringify(r.body));
+    const tablero = r.body.board;
+    assert.deepStrictEqual(tablero.people.slice().sort(), [paula.id, roberto.id].sort());
+    assert.deepStrictEqual(tablero.clients.slice().sort(), [kaia.id, nuevo.id].sort());
+    r = await senior('POST', '/api/boards', { name: 'auditoría santa marta' });
+    assert.strictEqual(r.status, 409, 'nombre repetido');
+    r = await senior('PATCH', '/api/boards?id=' + tablero.id, { people: [paula.id], name: 'Santa Marta 2026' });
+    assert.strictEqual(r.status, 200);
+    assert.deepStrictEqual(r.body.board.people, [paula.id]);
+    assert.strictEqual(r.body.board.name, 'Santa Marta 2026');
+    assert.deepStrictEqual(r.body.board.clients.slice().sort(), [kaia.id, nuevo.id].sort(), 'los clientes no cambian si no se envían');
+    r = await junior('GET', '/api/boards');
+    assert.strictEqual(r.body.boards.length, 1, 'el junior ve los tableros en los que participa');
+    r = await senior('PATCH', '/api/boards?id=' + tablero.id, { people: [roberto.id] });
+    r = await junior('GET', '/api/boards');
+    assert.strictEqual(r.body.boards.length, 0, 'y deja de verlos al salir');
+    r = await gerente('GET', '/api/boards');
+    assert.strictEqual(r.body.boards.length, 1);
+    r = await senior('DELETE', '/api/boards?id=' + tablero.id);
+    assert.strictEqual(r.status, 200);
+    assert.strictEqual(r.body.boards.length, 0);
+
     /* ---- fusionar cuentas duplicadas y eliminar personas ---- */
     r = await gerente('POST', '/api/people', { name: 'Paula Ariza Duplicada', email: 'paula.ariza@ejemplo.test', role: 'junior' });
     assert.strictEqual(r.status, 201);
