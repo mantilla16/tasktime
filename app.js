@@ -594,7 +594,10 @@ function renderSemana(mine) {
   const w = weekByIdx(UI.weekIdx) || S.weeks[0];
   const editable = !mine && isManager();
   const people = mine ? [S.user].map(function (u) { return personById(u.id) || u; }) : teamPeople();
-  const filas = rowsWeek(w.idx);
+  // Solo las horas de las personas del tablero y de sus clientes (en General, todas).
+  const filas = rowsWeek(w.idx).filter(function (r) {
+    return people.some(function (p) { return p.id === r.personId; }) && inBoardClient(r.clientId);
+  });
   const total = filas.reduce(function (a, r) { return a + (r.hours || 0); }, 0);
   const sobre = sobrecargados(w.idx, people);
   const sinHoras = people.filter(function (p) { return !filas.some(function (r) { return r.personId === p.id; }); }).length;
